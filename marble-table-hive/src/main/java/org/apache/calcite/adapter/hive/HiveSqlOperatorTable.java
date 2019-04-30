@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.adapter.hive;
 
+
 import org.apache.calcite.adapter.enumerable.CallImplementor;
 import org.apache.calcite.adapter.enumerable.NullPolicy;
 import org.apache.calcite.adapter.enumerable.RexImpTable;
@@ -157,7 +158,7 @@ public class HiveSqlOperatorTable extends ReflectiveSqlOperatorTable {
   }
 
   private void defineImplementors() {
-    //define implementors for hive operator
+    //define implementors for hive operators
     final List<SqlOperator> operatorList = getOperatorList();
     RexImpTable.INSTANCE.defineImplementors((map, aggMap, winAggMap) -> {
       for (SqlOperator sqlOperator : operatorList) {
@@ -231,14 +232,28 @@ public class HiveSqlOperatorTable extends ReflectiveSqlOperatorTable {
                 HiveSqlUDFReturnTypeInference.INSTANCE));
       } else {
         /**
-         * if a hive operator already exists in SqlStdOperatorTable and
-         * it is a SqlFunction, we should build a new HiveSqlFunction to
-         * decorate it ,we should keep the SqlKind of the function, because the
-         * calcite query optimizer will use it to choose if to perform
-         * optimizing.
-         **/
+         * Calcite will try to lookup for a new SqlOperator from OP Table
+         * to replace the default SqlOperator when deriving Type,
+         * it gives the chance to inject customized operators.
+         * see details in {@link SqlOperator#deriveType}:
+         * <code>
+         *      final SqlOperator sqlOperator =
+         *         SqlUtil.lookupRoutine(validator.getOperatorTable(),
+         *         getNameAsId(),
+         *             argTypes, null, null, getSyntax(), getKind());
+         *
+         *     ((SqlBasicCall) call).setOperator(sqlOperator);
+         * </code>
+         */
         if (operatorInSqlStdOperatorTable.getSyntax()
             == SqlSyntax.FUNCTION) {
+          /**
+           * if the target operator already exists in SqlStdOperatorTable and
+           * it's SqlSyntax is a Function, we build a new HiveSqlFunction to
+           * decorate it and keep the original SqlKind of the function, because the
+           * calcite query optimizer will use the kind to choose if to perform
+           * optimizing.
+           **/
           if (operatorInSqlStdOperatorTable == SqlStdOperatorTable.TRIM) {
             break;
           }
@@ -251,23 +266,8 @@ public class HiveSqlOperatorTable extends ReflectiveSqlOperatorTable {
               functionInStd.getFunctionType());
           register(newOp);
         } else {
-          /** handle non-function operators that we concerned in hive  */
           SqlOperator newOp;
           switch (sqlSyntax) {
-          /**
-           *
-           * calcite will lookup for a new SqlOperator from OP Table when
-           * deriving Type,so we have chance to inject our operators
-           * see details in {@link SqlOperator#deriveType}:
-           * <code>
-           *      final SqlOperator sqlOperator =
-           *         SqlUtil.lookupRoutine(validator.getOperatorTable(),
-           *         getNameAsId(),
-           *             argTypes, null, null, getSyntax(), getKind());
-           *
-           *     ((SqlBasicCall) call).setOperator(sqlOperator);
-           * </code>
-           */
           case BINARY:
             if (operatorInSqlStdOperatorTable
                 == SqlStdOperatorTable.PERCENT_REMAINDER) {
@@ -296,18 +296,6 @@ public class HiveSqlOperatorTable extends ReflectiveSqlOperatorTable {
             register(newOp);
             break;
           case SPECIAL:
-            if (upName.equals("RLIKE")
-                || upName.equals("NOT RLIKE")
-                || upName.equals("REGEXP")
-                || upName.equals("NOT REGEXP")) {
-              newOp = new SqlSpecialOperator(upName,
-                  operatorInSqlStdOperatorTable.getKind(),
-                  32,
-                  false,
-                  HiveSqlUDFReturnTypeInference.INSTANCE, null,
-                  HiveSqlFunction.ArgChecker.INSTANCE);
-              register(newOp);
-            }
             break;
           default:
             break;
@@ -386,7 +374,8 @@ public class HiveSqlOperatorTable extends ReflectiveSqlOperatorTable {
     for (SqlOperator op : ops) {
       if (isAgg && op instanceof SqlAggFunction) {
         return op;
-      } else {
+      }
+      if (!isAgg && !(op instanceof SqlAggFunction)) {
         return op;
       }
     }
