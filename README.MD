@@ -80,13 +80,30 @@ It shows how marble customized calcite in the sql processing flow:
 ![how_marble_customized_calcite](./how_marble_customized_calcite.jpg)  
 You can find more details from calcite-patch's commit history.Now Marble uses calcite `1.18.0`.
 
+The main type mapping between calcite and hive is:  
+
+| CalciteSqlType | JavaStorageType | HiveObjectInspector |
+| :---:        |     :---:      |     :---:    |
+| BIGINT   | Long    | LongObjectInspector    |
+| INTEGER     | Int      | IntObjectInspector    |
+| DOUBLE   | Double    | DoubleObjectInspectors    |
+| DECIMAL     | BigDecimal       | HiveDecimalObjectInspector      |
+| VARCHAR   | String     | StringObjectInspector    |
+| DATE     | Int      | DateObjectInspector      |
+| TIMESTAMP     | Long       | TimestampObjectInspector     |
+| ARRAY     | List      | StandardListObjectInspector     |
+| ......     | ......      | ......     |
+
+
+
+
 ## Roadmap
 *  improve compatibility with hive sql.(high priority)
 *  submit patches to Calcite,make it easy to upgrading calcite-core,
 some related issues:[CALCITE-2282](https://issues.apache.org/jira/browse/CALCITE-2282),[CALCITE-2973](https://issues.apache.org/jira/browse/CALCITE-2973),[CALCITE-2992](https://issues.apache.org/jira/browse/CALCITE-2992).(high priority)
 *  hive udf's constant folded.(low priority)
 *  use a customized sql Planner to replace the default PlannerImpl.(low priority)
-*  support TPC-DS query in a customized scale.(low priority)
+*  support TPC-DS queries with a customized scale.(low priority)
 *  distributed broadcast join.(experimental)
 *  cost based optimizer.(experimental)
 
