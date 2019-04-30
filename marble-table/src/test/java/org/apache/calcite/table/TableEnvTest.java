@@ -16,6 +16,8 @@
  */
 package org.apache.calcite.table;
 
+import org.apache.calcite.sql.type.SqlTypeName;
+
 import com.google.common.collect.Lists;
 
 import org.junit.Assert;
@@ -23,14 +25,18 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  *
  */
 public class TableEnvTest {
 
-  static final TableEnv TABLE_ENV = TableEnv.getTableEnv();
+  static final TableEnv tableEnv = TableEnv.getTableEnv();
 
   static {
     TableEnv.enableSqlPlanCacheSize(200);
@@ -78,23 +84,49 @@ public class TableEnvTest {
     p2.k = false;
     Pojo1 p3 = new Pojo1();
     p3.b = 3;
-    DataTable t1 = TABLE_ENV.fromJavaPojoList(Lists.newArrayList(p1, p2, p3));
-    TABLE_ENV.addSubSchema("test");
-    TABLE_ENV.registerTable("test", "t1",
+    DataTable t1 = tableEnv.fromJavaPojoList(Lists.newArrayList(p1, p2, p3));
+    tableEnv.addSubSchema("test");
+    tableEnv.registerTable("test", "t1",
         t1);
-    TABLE_ENV.registerTable("t2",
+    tableEnv.registerTable("t2",
         t1);
-    TABLE_ENV.addFunction("", "hello", TableEnvTest.class.getName(), "hello");
+    tableEnv.addFunction("", "hello", TableEnvTest.class.getName(), "hello");
   }
 
   @Test
+  public void testCreateTableFromRowListWithSqlType() {
+    List<Map<String, Object>> rowList = new ArrayList<>();
+    Map<String, Object> row1 = new HashMap<>();
+    row1.put("c1", 1);
+    row1.put("c2", 0.1);
+    row1.put("c3", new Date().getTime());
+    rowList.add(row1);
+    Map<String, Object> row2 = new HashMap<>();
+    row1.put("c1", 2);
+    row1.put("c2", 0.2);
+    row1.put("c3", new Date().getTime());
+    rowList.add(row2);
+
+    Map<String, SqlTypeName> sqlTypeMap = new HashMap<>();
+    sqlTypeMap.put("c1", SqlTypeName.BIGINT);
+    sqlTypeMap.put("c2", SqlTypeName.DECIMAL);
+    sqlTypeMap.put("c3", SqlTypeName.TIMESTAMP);
+    DataTable dataTable = tableEnv.fromRowListWithSqlTypeMap(rowList,
+        sqlTypeMap);
+    tableEnv.registerTable("t", dataTable);
+    DataTable queryResult = tableEnv.sqlQuery("select * from t");
+    Assert.assertTrue(queryResult.getRowCount() == 2);
+  }
+
+
+  @Test
   public void testApi() {
-    DataTable table1 = TABLE_ENV.sqlQuery("select * from test.t1");
+    DataTable table1 = tableEnv.sqlQuery("select * from test.t1");
     Assert.assertNotNull(table1);
-    DataTable table2 = TABLE_ENV.sqlQuery("select * from t2");
+    DataTable table2 = tableEnv.sqlQuery("select * from t2");
     Assert.assertNotNull(table2);
     Assert.assertEquals("hello,marble",
-        TABLE_ENV.sqlQuery("select hello('marble') as c1")
+        tableEnv.sqlQuery("select hello('marble') as c1")
             .toMapList()
             .get(0)
             .get("c1"));
@@ -104,14 +136,14 @@ public class TableEnvTest {
   @Test
   public void testSqlPlanCache() {
     String query = "select * from test.t1 join t2 on t1.b=t2.b";
-    TABLE_ENV.sqlQuery(query);
-    Assert.assertTrue(TABLE_ENV.getExecutionCode(query).contains("T1")
-        && TABLE_ENV.getExecutionCode(query).contains("T2"));
+    tableEnv.sqlQuery(query);
+    Assert.assertTrue(tableEnv.getExecutionCode(query).contains("T1")
+        && tableEnv.getExecutionCode(query).contains("T2"));
     TableEnv.clearExecutionPlan();
-    TABLE_ENV.registerSqlBindableClass(query, BazJoinExample.class);
-    TABLE_ENV.sqlQuery(query);
+    tableEnv.registerSqlBindableClass(query, BazJoinExample.class);
+    tableEnv.sqlQuery(query);
     Assert.assertTrue(
-        TABLE_ENV.getExecutionPlan(query).getBindable().getClass()
+        tableEnv.getExecutionPlan(query).getBindable().getClass()
             == BazJoinExample.class);
   }
 

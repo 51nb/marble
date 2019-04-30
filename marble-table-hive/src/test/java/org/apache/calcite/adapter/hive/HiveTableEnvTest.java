@@ -17,6 +17,7 @@
 package org.apache.calcite.adapter.hive;
 
 import org.apache.calcite.runtime.SqlFunctions;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.table.DataTable;
 import org.apache.calcite.table.TableEnv;
 
@@ -30,6 +31,9 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -39,7 +43,7 @@ import java.util.TimeZone;
  */
 public class HiveTableEnvTest {
 
-  static final TableEnv TABLE_ENV = HiveTableEnv.getTableEnv();
+  static final TableEnv tableEnv = HiveTableEnv.getTableEnv();
 
   static {
     TableEnv.enableSqlPlanCacheSize(200);
@@ -73,18 +77,18 @@ public class HiveTableEnvTest {
           "INSERT INTO t2(c1,c2,c3,c4,c5) VALUES('1',2,3.1415,0.1,'a')");
       stmt.execute(
           "INSERT INTO t2(c1,c2,c3,c4,c5) VALUES('2',4,3.1415,0.2,'b')");
-      DataTable t1 = TABLE_ENV.fromJdbcResultSet(
+      DataTable t1 = tableEnv.fromJdbcResultSet(
           stmt.executeQuery("select * from t1"));
-      TABLE_ENV.registerTable("t1", t1);
-      DataTable t2 = TABLE_ENV.fromJdbcResultSet(
+      tableEnv.registerTable("t1", t1);
+      DataTable t2 = tableEnv.fromJdbcResultSet(
           stmt.executeQuery("select * from t2"));
-      TABLE_ENV.registerTable("t2", t2);
+      tableEnv.registerTable("t2", t2);
       stmt.close();
     }
   }
 
   private List<Map<String, Object>> executeSql(String sql) {
-    List<Map<String, Object>> rt = TABLE_ENV.sqlQuery(sql).toMapList();
+    List<Map<String, Object>> rt = tableEnv.sqlQuery(sql).toMapList();
     System.out.println(rt);
     return rt;
   }
@@ -323,7 +327,7 @@ public class HiveTableEnvTest {
   @Test public void testLateralTable() {
     String query = "select t1.* ,t2.n1 from t1,LATERAL TABLE(explode(split"
         + "(t1.c5,','))) as t2(n1) ";
-    DataTable queryResult = TABLE_ENV.sqlQuery(query);
+    DataTable queryResult = tableEnv.sqlQuery(query);
     Assert.assertTrue(queryResult.toMapList().size() == 3 + 2);
   }
 
@@ -334,10 +338,9 @@ public class HiveTableEnvTest {
     String query =
         "select t1.*,t2.*  from t1 left outer join t2 on t1.c1=t2.c1 "
             + "and t1.c1<2 ";
-    DataTable queryResult = TABLE_ENV.sqlQuery(query);
+    DataTable queryResult = tableEnv.sqlQuery(query);
     Assert.assertTrue(queryResult.toMapList().size() == 2);
   }
-
 }
 
 // End HiveTableEnvTest.java

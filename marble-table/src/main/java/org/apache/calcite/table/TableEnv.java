@@ -612,8 +612,8 @@ public class TableEnv {
     }
   }
 
-  public DataTable fromListMapWithSqlTypeMap(List<Map<String, Object>> listMap,
-      Map<String, SqlTypeName> schema) {
+  public DataTable fromRowListWithSqlTypeMap(List<Map<String, Object>> rowList,
+      Map<String, SqlTypeName> sqlTypeMap) {
     try {
       final RelDataTypeFactory.Builder builder = calciteCatalogReader
           .getTypeFactory()
@@ -624,21 +624,21 @@ public class TableEnv {
       RelDataType rowType;
       List convertRows = new DataTable.DataTableStoreList();
 
-      List<String> schemaKeys = new ArrayList<>(schema.keySet());
+      List<String> schemaKeys = new ArrayList<>(sqlTypeMap.keySet());
       schemaKeys.forEach(key -> {
-        builder.add(key.toLowerCase(), schema.get(key)).nullable(true);
+        builder.add(key.toLowerCase(), sqlTypeMap.get(key)).nullable(true);
       });
       rowType = builder.build();
 
-      for (Map<String, Object> map : listMap) {
+      for (Map<String, Object> map : rowList) {
         int i = 0;
-        Object[] row = new Object[schema.size()];
+        Object[] row = new Object[sqlTypeMap.size()];
         for (String key : schemaKeys) {
 
           Object o = map.get(key);
           PojoRelDataTypeValue calciteValue = pojoTypeConverter
               .javaObjectToCalciteObject(
-                  schema.get(key), o, tableConfig.getTimeZone(), null);
+                  sqlTypeMap.get(key), o, tableConfig.getTimeZone(), null);
           row[i] = calciteValue.getValue();
           i++;
         }

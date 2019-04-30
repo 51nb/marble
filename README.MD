@@ -1,5 +1,5 @@
-Marble is a high performance in-memory hive sql engine based on Apache Calcite.  
-It can help you to migrate hive sql scripts to a real-time computing system.
+**Marble is a high performance in-memory hive sql engine based on [Apache Calcite](https://calcite.apache.org/).  
+It can help you to migrate hive sql scripts to a real-time computing system.**
 
 ## Build and run tests
 **Requirements**
@@ -68,7 +68,6 @@ a `TableConfig` to create a new TableEnv to support other sql dialects(MysqlTabl
 * part of UDTF
 * implicit type cast
 * load customized UDF,UDAF by package name
-
   ```
   HiveTableEnv.registerHiveFunctionPackages("com.u51.data.hive.udf"); 
   ```
@@ -79,20 +78,22 @@ sql queries.
 ## Design
 It shows how marble customized calcite in the sql processing flow:
 ![how_marble_customized_calcite](./how_marble_customized_calcite.jpg)  
-You can see more details on calcite-patch's commit history.Now Marble uses calcite `0.18.0`.
+You can find more details from calcite-patch's commit history.Now Marble uses calcite `1.18.0`.
 
 ## Roadmap
-*  improve compatibility with hive sql(high priority)
-*  submit patches to Calcite,make it easy to upgrading calcite-core(high priority)
-*  use a customized sql Planner to replace the default PlannerImpl(low priority)
-*  support TPC-DS query in a customized scale(low priority)
-*  distributed broadcast join(experimental)
-*  cost based optimizer(experimental)
+*  improve compatibility with hive sql.(high priority)
+*  submit patches to Calcite,make it easy to upgrading calcite-core,
+some related issues:[CALCITE-2282](https://issues.apache.org/jira/browse/CALCITE-2282),[CALCITE-2973](https://issues.apache.org/jira/browse/CALCITE-2973),[CALCITE-2992](https://issues.apache.org/jira/browse/CALCITE-2992).(high priority)
+*  hive udf's constant folded.(low priority)
+*  use a customized sql Planner to replace the default PlannerImpl.(low priority)
+*  support TPC-DS query in a customized scale.(low priority)
+*  distributed broadcast join.(experimental)
+*  cost based optimizer.(experimental)
 
 ## Contributing
 Welcome contributions.
 Please use the Calcite-idea-code-style.xml under the marble directory to reformat code,
-and ensure that the validation of maven checker-style plugin is success after source building.
+and ensure that the validation of maven checker-style plugin is success after source code building.
 
 ## License
 This library is distributed under terms of Apache 2 License

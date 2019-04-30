@@ -32,7 +32,6 @@ import org.apache.calcite.sql.SqlPrefixOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.fun.SqlLikeOperator;
-import org.apache.calcite.sql.fun.SqlMonotonicBinaryOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.util.ReflectiveSqlOperatorTable;
@@ -102,36 +101,13 @@ public class HiveSqlOperatorTable extends ReflectiveSqlOperatorTable {
           .instance()
           .getOperatorList();
   private ArrayListMultimap<String, SqlOperator>
-      operatorMapOfSqlStdOperatorTable =
-      ArrayListMultimap.create();
-  /**
-   * replace the DIVIDE FUNCTION in Parser.jj, Inferring type is not right by
-   * {@link SqlStdOperatorTable#DIVIDE}
-   */
-  public static final SqlBinaryOperator DIVIDE =
-      new SqlBinaryOperator(
-          "/",
-          SqlKind.DIVIDE,
-          60,
-          true,
-          HiveSqlUDFReturnTypeInference.INSTANCE,
-          null,
-          HiveSqlFunction.ArgChecker.INSTANCE);
+      operatorMapOfSqlStdOperatorTable = ArrayListMultimap
+      .create();
 
   /**
-   * Arithmetic multiplication operator, '<code>*</code>'.
-   * {@link SqlStdOperatorTable#MULTIPLY}
+   * see Parser.jj
+   * HiveSqlOperatorTable.CAST.createCall(s.end(this), args)
    */
-  public static final SqlBinaryOperator MULTIPLY =
-      new SqlMonotonicBinaryOperator(
-          "*",
-          SqlKind.TIMES,
-          60,
-          true,
-          HiveSqlUDFReturnTypeInference.INSTANCE,
-          null,
-          HiveSqlFunction.ArgChecker.INSTANCE);
-
   public static final SqlFunction CAST = new HiveSqlCastFunction();
 
   public static final SqlSpecialOperator RLIKE =

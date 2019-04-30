@@ -5431,8 +5431,8 @@ SqlBinaryOperator BinaryRowOperator() :
     }
 |   <PLUS> { return SqlStdOperatorTable.PLUS; }
 |   <MINUS> { return SqlStdOperatorTable.MINUS; }
-|   <STAR> { return HiveSqlOperatorTable.MULTIPLY; }
-|   <SLASH> { return HiveSqlOperatorTable.DIVIDE; }
+|   <STAR> { return SqlStdOperatorTable.MULTIPLY; }
+|   <SLASH> { return SqlStdOperatorTable.DIVIDE; }
 |   <PERCENT_REMAINDER> {
         if (!this.conformance.isPercentRemainderAllowed()) {
             throw new ParseException(RESOURCE.percentRemainderNotAllowed().str());
