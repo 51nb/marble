@@ -174,7 +174,7 @@ public class Programs {
 
   /** Creates a program that executes a list of rules in a HEP planner. */
   public static Program hep(Iterable<? extends RelOptRule> rules,
-                            boolean noDag, RelMetadataProvider metadataProvider) {
+      boolean noDag, RelMetadataProvider metadataProvider) {
     final HepProgramBuilder builder = HepProgram.builder();
     for (RelOptRule rule : rules) {
       builder.addRuleInstance(rule);
@@ -184,7 +184,7 @@ public class Programs {
 
   /** Creates a program that executes a {@link HepProgram}. */
   public static Program of(final HepProgram hepProgram, final boolean noDag,
-                           final RelMetadataProvider metadataProvider) {
+      final RelMetadataProvider metadataProvider) {
     return (planner, rel, requiredOutputTraits, materializations, lattices) -> {
       final HepPlanner hepPlanner = new HepPlanner(hepProgram,
           null, noDag, null, RelOptCostImpl.FACTORY);
@@ -319,9 +319,9 @@ public class Programs {
     }
 
     public RelNode run(RelOptPlanner planner, RelNode rel,
-                       RelTraitSet requiredOutputTraits,
-                       List<RelOptMaterialization> materializations,
-                       List<RelOptLattice> lattices) {
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices) {
       planner.clear();
       for (RelOptRule rule : ruleSet) {
         planner.addRule(rule);
@@ -351,9 +351,9 @@ public class Programs {
     }
 
     public RelNode run(RelOptPlanner planner, RelNode rel,
-                       RelTraitSet requiredOutputTraits,
-                       List<RelOptMaterialization> materializations,
-                       List<RelOptLattice> lattices) {
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices) {
       for (Program program : programs) {
         rel = program.run(
             planner, rel, requiredOutputTraits, materializations, lattices);
@@ -369,11 +369,11 @@ public class Programs {
    * Decorrelator gets field offsets confused if fields have been trimmed</a>,
    * disable field-trimming in {@link SqlToRelConverter}, and run
    * {@link TrimFieldsProgram} after this program. */
-  private static class DecorrelateProgram implements Program {
+  public static class DecorrelateProgram implements Program {
     public RelNode run(RelOptPlanner planner, RelNode rel,
-                       RelTraitSet requiredOutputTraits,
-                       List<RelOptMaterialization> materializations,
-                       List<RelOptLattice> lattices) {
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices) {
       final CalciteConnectionConfig config =
           planner.getContext().unwrap(CalciteConnectionConfig.class);
       if (config != null && config.forceDecorrelate()) {
@@ -386,11 +386,11 @@ public class Programs {
   }
 
   /** Program that trims fields. */
-  private static class TrimFieldsProgram implements Program {
+  public static class TrimFieldsProgram implements Program {
     public RelNode run(RelOptPlanner planner, RelNode rel,
-                       RelTraitSet requiredOutputTraits,
-                       List<RelOptMaterialization> materializations,
-                       List<RelOptLattice> lattices) {
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices) {
       final RelBuilder relBuilder =
           RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
       return new RelFieldTrimmer(null, relBuilder).trim(rel);

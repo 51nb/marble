@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.adapter.enumerable;
 
+import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.util.ImmutableBitSet;
@@ -86,6 +87,8 @@ public interface AggContext {
 
   /** Returns the grouping sets we are aggregating on. */
   List<ImmutableBitSet> groupSets();
+
+  AggregateCall call();
 }
 
 // End AggContext.java

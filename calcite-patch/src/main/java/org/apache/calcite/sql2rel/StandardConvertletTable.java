@@ -91,7 +91,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
 
   //~ Constructors -----------------------------------------------------------
 
-  private StandardConvertletTable() {
+  public StandardConvertletTable() {
     super();
 
     // Register aliases (operators which have a different name but
@@ -119,13 +119,13 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
               (RexCall) StandardConvertletTable.this.convertCall(cx, call,
                   call.getOperator());
           switch (e.getOperands().get(0).getType().getSqlTypeName()) {
-            case DATE:
-            case TIME:
-            case TIMESTAMP:
-              return convertDatetimeMinus(cx, SqlStdOperatorTable.MINUS_DATE,
-                  call);
-            default:
-              return e;
+          case DATE:
+          case TIME:
+          case TIMESTAMP:
+            return convertDatetimeMinus(cx, SqlStdOperatorTable.MINUS_DATE,
+                call);
+          default:
+            return e;
           }
         });
 
@@ -329,7 +329,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
   }
 
   private static RexNode divideInt(RexBuilder rexBuilder, RexNode a0,
-                                   RexNode a1) {
+      RexNode a1) {
     return rexBuilder.makeCall(SqlStdOperatorTable.DIVIDE_INTEGER, a0, a1);
   }
 
@@ -342,7 +342,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
   }
 
   private static RexNode multiply(RexBuilder rexBuilder, RexNode a0,
-                                  RexNode a1) {
+      RexNode a1) {
     return rexBuilder.makeCall(SqlStdOperatorTable.MULTIPLY, a0, a1);
   }
 
@@ -595,7 +595,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
   }
 
   private RexNode mod(RexBuilder rexBuilder, RelDataType resType, RexNode res,
-                      BigDecimal val) {
+      BigDecimal val) {
     if (val.equals(BigDecimal.ONE)) {
       return res;
     }
@@ -604,7 +604,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
   }
 
   private static RexNode divide(RexBuilder rexBuilder, RexNode res,
-                                BigDecimal val) {
+      BigDecimal val) {
     if (val.equals(BigDecimal.ONE)) {
       return res;
     }
@@ -784,7 +784,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
   }
 
   private static List<RexNode> convertExpressionList(SqlRexContext cx,
-                                                     List<SqlNode> nodes, SqlOperandTypeChecker.Consistency consistency) {
+      List<SqlNode> nodes, SqlOperandTypeChecker.Consistency consistency) {
     final List<RexNode> exprs = new ArrayList<>();
     for (SqlNode node : nodes) {
       exprs.add(cx.convertExpression(node));
@@ -804,78 +804,78 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
   }
 
   private static RelDataType consistentType(SqlRexContext cx,
-                                            SqlOperandTypeChecker.Consistency consistency, List<RelDataType> types) {
+      SqlOperandTypeChecker.Consistency consistency, List<RelDataType> types) {
     switch (consistency) {
-      case COMPARE:
-        if (SqlTypeUtil.areSameFamily(types)) {
-          // All arguments are of same family. No need for explicit casts.
-          return null;
+    case COMPARE:
+      if (SqlTypeUtil.areSameFamily(types)) {
+        // All arguments are of same family. No need for explicit casts.
+        return null;
+      }
+      final List<RelDataType> nonCharacterTypes = new ArrayList<>();
+      for (RelDataType type : types) {
+        if (type.getFamily() != SqlTypeFamily.CHARACTER) {
+          nonCharacterTypes.add(type);
         }
-        final List<RelDataType> nonCharacterTypes = new ArrayList<>();
-        for (RelDataType type : types) {
-          if (type.getFamily() != SqlTypeFamily.CHARACTER) {
-            nonCharacterTypes.add(type);
-          }
-        }
-        if (!nonCharacterTypes.isEmpty()) {
-          final int typeCount = types.size();
-          types = nonCharacterTypes;
-          if (nonCharacterTypes.size() < typeCount) {
-            final RelDataTypeFamily family =
-                nonCharacterTypes.get(0).getFamily();
-            if (family instanceof SqlTypeFamily) {
-              // The character arguments might be larger than the numeric
-              // argument. Give ourselves some headroom.
-              switch ((SqlTypeFamily) family) {
-                case INTEGER:
-                case NUMERIC:
-                  nonCharacterTypes.add(
-                      cx.getTypeFactory().createSqlType(SqlTypeName.BIGINT));
-              }
+      }
+      if (!nonCharacterTypes.isEmpty()) {
+        final int typeCount = types.size();
+        types = nonCharacterTypes;
+        if (nonCharacterTypes.size() < typeCount) {
+          final RelDataTypeFamily family =
+              nonCharacterTypes.get(0).getFamily();
+          if (family instanceof SqlTypeFamily) {
+            // The character arguments might be larger than the numeric
+            // argument. Give ourselves some headroom.
+            switch ((SqlTypeFamily) family) {
+            case INTEGER:
+            case NUMERIC:
+              nonCharacterTypes.add(
+                  cx.getTypeFactory().createSqlType(SqlTypeName.BIGINT));
             }
           }
         }
-        // fall through
-      case LEAST_RESTRICTIVE:
-        return cx.getTypeFactory().leastRestrictive(types);
-      default:
-        return null;
+      }
+      // fall through
+    case LEAST_RESTRICTIVE:
+      return cx.getTypeFactory().leastRestrictive(types);
+    default:
+      return null;
     }
   }
 
   private RexNode convertPlus(SqlRexContext cx, SqlCall call) {
     final RexNode rex = convertCall(cx, call);
     switch (rex.getType().getSqlTypeName()) {
-      case DATE:
-      case TIME:
-      case TIMESTAMP:
-        // Use special "+" operator for datetime + interval.
-        // Re-order operands, if necessary, so that interval is second.
-        final RexBuilder rexBuilder = cx.getRexBuilder();
-        List<RexNode> operands = ((RexCall) rex).getOperands();
-        if (operands.size() == 2) {
-          final SqlTypeName sqlTypeName = operands.get(0).getType().getSqlTypeName();
-          switch (sqlTypeName) {
-            case INTERVAL_YEAR:
-            case INTERVAL_YEAR_MONTH:
-            case INTERVAL_MONTH:
-            case INTERVAL_DAY:
-            case INTERVAL_DAY_HOUR:
-            case INTERVAL_DAY_MINUTE:
-            case INTERVAL_DAY_SECOND:
-            case INTERVAL_HOUR:
-            case INTERVAL_HOUR_MINUTE:
-            case INTERVAL_HOUR_SECOND:
-            case INTERVAL_MINUTE:
-            case INTERVAL_MINUTE_SECOND:
-            case INTERVAL_SECOND:
-              operands = ImmutableList.of(operands.get(1), operands.get(0));
-          }
+    case DATE:
+    case TIME:
+    case TIMESTAMP:
+      // Use special "+" operator for datetime + interval.
+      // Re-order operands, if necessary, so that interval is second.
+      final RexBuilder rexBuilder = cx.getRexBuilder();
+      List<RexNode> operands = ((RexCall) rex).getOperands();
+      if (operands.size() == 2) {
+        final SqlTypeName sqlTypeName = operands.get(0).getType().getSqlTypeName();
+        switch (sqlTypeName) {
+        case INTERVAL_YEAR:
+        case INTERVAL_YEAR_MONTH:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_DAY_HOUR:
+        case INTERVAL_DAY_MINUTE:
+        case INTERVAL_DAY_SECOND:
+        case INTERVAL_HOUR:
+        case INTERVAL_HOUR_MINUTE:
+        case INTERVAL_HOUR_SECOND:
+        case INTERVAL_MINUTE:
+        case INTERVAL_MINUTE_SECOND:
+        case INTERVAL_SECOND:
+          operands = ImmutableList.of(operands.get(1), operands.get(0));
         }
-        return rexBuilder.makeCall(rex.getType(),
-            SqlStdOperatorTable.DATETIME_PLUS, operands);
-      default:
-        return rex;
+      }
+      return rexBuilder.makeCall(rex.getType(),
+          SqlStdOperatorTable.DATETIME_PLUS, operands);
+    default:
+      return rex;
     }
   }
 
@@ -913,17 +913,17 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
     RexNode res;
     final SqlBetweenOperator.Flag symmetric = op.flag;
     switch (symmetric) {
-      case ASYMMETRIC:
-        res = and1;
-        break;
-      case SYMMETRIC:
-        RexNode ge2 = ge(rexBuilder, x, z);
-        RexNode le2 = le(rexBuilder, x, y);
-        RexNode and2 = and(rexBuilder, ge2, le2);
-        res = or(rexBuilder, and1, and2);
-        break;
-      default:
-        throw Util.unexpected(symmetric);
+    case ASYMMETRIC:
+      res = and1;
+      break;
+    case SYMMETRIC:
+      RexNode ge2 = ge(rexBuilder, x, z);
+      RexNode le2 = le(rexBuilder, x, y);
+      RexNode and2 = and(rexBuilder, ge2, le2);
+      res = or(rexBuilder, and1, and2);
+      break;
+    default:
+      throw Util.unexpected(symmetric);
     }
     final SqlBetweenOperator betweenOp =
         (SqlBetweenOperator) call.getOperator();
@@ -1006,50 +1006,50 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
     final RexNode e1 = case_(rexBuilder, rightSwap, r3, r2);
     // (e0 >= s1) AND (e1 >= s0)
     switch (op.kind) {
-      case OVERLAPS:
-        return and(rexBuilder,
-            ge(rexBuilder, e0, s1),
-            ge(rexBuilder, e1, s0));
-      case CONTAINS:
-        return and(rexBuilder,
-            le(rexBuilder, s0, s1),
-            ge(rexBuilder, e0, e1));
-      case PERIOD_EQUALS:
-        return and(rexBuilder,
-            eq(rexBuilder, s0, s1),
-            eq(rexBuilder, e0, e1));
-      case PRECEDES:
-        return le(rexBuilder, e0, s1);
-      case IMMEDIATELY_PRECEDES:
-        return eq(rexBuilder, e0, s1);
-      case SUCCEEDS:
-        return ge(rexBuilder, s0, e1);
-      case IMMEDIATELY_SUCCEEDS:
-        return eq(rexBuilder, s0, e1);
-      default:
-        throw new AssertionError(op);
+    case OVERLAPS:
+      return and(rexBuilder,
+          ge(rexBuilder, e0, s1),
+          ge(rexBuilder, e1, s0));
+    case CONTAINS:
+      return and(rexBuilder,
+          le(rexBuilder, s0, s1),
+          ge(rexBuilder, e0, e1));
+    case PERIOD_EQUALS:
+      return and(rexBuilder,
+          eq(rexBuilder, s0, s1),
+          eq(rexBuilder, e0, e1));
+    case PRECEDES:
+      return le(rexBuilder, e0, s1);
+    case IMMEDIATELY_PRECEDES:
+      return eq(rexBuilder, e0, s1);
+    case SUCCEEDS:
+      return ge(rexBuilder, s0, e1);
+    case IMMEDIATELY_SUCCEEDS:
+      return eq(rexBuilder, s0, e1);
+    default:
+      throw new AssertionError(op);
     }
   }
 
   private Pair<RexNode, RexNode> convertOverlapsOperand(SqlRexContext cx,
-                                                        SqlParserPos pos, SqlNode operand) {
+      SqlParserPos pos, SqlNode operand) {
     final SqlNode a0;
     final SqlNode a1;
     switch (operand.getKind()) {
-      case ROW:
-        a0 = ((SqlCall) operand).operand(0);
-        final SqlNode a10 = ((SqlCall) operand).operand(1);
-        final RelDataType t1 = cx.getValidator().getValidatedNodeType(a10);
-        if (SqlTypeUtil.isInterval(t1)) {
-          // make t1 = t0 + t1 when t1 is an interval.
-          a1 = plus(pos, a0, a10);
-        } else {
-          a1 = a10;
-        }
-        break;
-      default:
-        a0 = operand;
-        a1 = operand;
+    case ROW:
+      a0 = ((SqlCall) operand).operand(0);
+      final SqlNode a10 = ((SqlCall) operand).operand(1);
+      final RelDataType t1 = cx.getValidator().getValidatedNodeType(a10);
+      if (SqlTypeUtil.isInterval(t1)) {
+        // make t1 = t0 + t1 when t1 is an interval.
+        a1 = plus(pos, a0, a10);
+      } else {
+        a1 = a10;
+      }
+      break;
+    default:
+      a0 = operand;
+      a1 = operand;
     }
 
     final RexNode r0 = cx.convertExpression(a0);
@@ -1076,7 +1076,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
    * additional cast.
    */
   public static RexNode castToValidatedType(SqlNode node, RexNode e,
-                                            SqlValidator validator, RexBuilder rexBuilder) {
+      SqlValidator validator, RexBuilder rexBuilder) {
     final RelDataType type = validator.getValidatedNodeType(node);
     if (e.getType() == type) {
       return e;
@@ -1102,20 +1102,20 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
       final RelDataType type =
           cx.getValidator().getValidatedNodeType(call);
       switch (kind) {
-        case COVAR_POP:
-          expr = expandCovariance(arg1, arg2, null, type, cx, true);
-          break;
-        case COVAR_SAMP:
-          expr = expandCovariance(arg1, arg2, null, type, cx, false);
-          break;
-        case REGR_SXX:
-          expr = expandRegrSzz(arg2, arg1, type, cx, true);
-          break;
-        case REGR_SYY:
-          expr = expandRegrSzz(arg1, arg2, type, cx, true);
-          break;
-        default:
-          throw Util.unexpected(kind);
+      case COVAR_POP:
+        expr = expandCovariance(arg1, arg2, null, type, cx, true);
+        break;
+      case COVAR_SAMP:
+        expr = expandCovariance(arg1, arg2, null, type, cx, false);
+        break;
+      case REGR_SXX:
+        expr = expandRegrSzz(arg2, arg1, type, cx, true);
+        break;
+      case REGR_SYY:
+        expr = expandRegrSzz(arg1, arg2, type, cx, true);
+        break;
+      default:
+        throw Util.unexpected(kind);
       }
       RexNode rex = cx.convertExpression(expr);
       return cx.getRexBuilder().ensureType(type, rex, true);
@@ -1199,7 +1199,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
     }
 
     private SqlNode getCastedSqlNode(SqlNode argInput, RelDataType varType,
-                                     SqlParserPos pos, RexNode argRex) {
+        SqlParserPos pos, RexNode argRex) {
       SqlNode arg;
       if (argRex != null && !argRex.getType().equals(varType)) {
         arg = SqlStdOperatorTable.CAST.createCall(
@@ -1227,23 +1227,23 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
       final RelDataType type =
           cx.getValidator().getValidatedNodeType(call);
       switch (kind) {
-        case AVG:
-          expr = expandAvg(arg, type, cx);
-          break;
-        case STDDEV_POP:
-          expr = expandVariance(arg, type, cx, true, true);
-          break;
-        case STDDEV_SAMP:
-          expr = expandVariance(arg, type, cx, false, true);
-          break;
-        case VAR_POP:
-          expr = expandVariance(arg, type, cx, true, false);
-          break;
-        case VAR_SAMP:
-          expr = expandVariance(arg, type, cx, false, false);
-          break;
-        default:
-          throw Util.unexpected(kind);
+      case AVG:
+        expr = expandAvg(arg, type, cx);
+        break;
+      case STDDEV_POP:
+        expr = expandVariance(arg, type, cx, true, true);
+        break;
+      case STDDEV_SAMP:
+        expr = expandVariance(arg, type, cx, false, true);
+        break;
+      case VAR_POP:
+        expr = expandVariance(arg, type, cx, true, false);
+        break;
+      case VAR_SAMP:
+        expr = expandVariance(arg, type, cx, false, false);
+        break;
+      default:
+        throw Util.unexpected(kind);
       }
       RexNode rex = cx.convertExpression(expr);
       return cx.getRexBuilder().ensureType(type, rex, true);
@@ -1340,7 +1340,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
     }
 
     private SqlNode getCastedSqlNode(SqlNode argInput, RelDataType varType,
-                                     SqlParserPos pos, RexNode argRex) {
+        SqlParserPos pos, RexNode argRex) {
       SqlNode arg;
       if (argRex != null && !argRex.getType().equals(varType)) {
         arg = SqlStdOperatorTable.CAST.createCall(
@@ -1392,14 +1392,14 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
           cx.getValidator().getValidatedNodeType(call);
       final SqlBinaryOperator op;
       switch (call.getKind()) {
-        case GREATEST:
-          op = SqlStdOperatorTable.GREATER_THAN;
-          break;
-        case LEAST:
-          op = SqlStdOperatorTable.LESS_THAN;
-          break;
-        default:
-          throw new AssertionError();
+      case GREATEST:
+        op = SqlStdOperatorTable.GREATER_THAN;
+        break;
+      case LEAST:
+        op = SqlStdOperatorTable.LESS_THAN;
+        break;
+      default:
+        throw new AssertionError();
       }
       final List<RexNode> exprs = convertExpressionList(cx,
           call.getOperandList(), SqlOperandTypeChecker.Consistency.NONE);
@@ -1445,18 +1445,18 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
           new SqlIntervalQualifier(unit, null, unitLiteral.getParserPosition());
       RexNode op1 = cx.convertExpression(call.operand(1));
       switch (unit) {
-        case MICROSECOND:
-        case NANOSECOND:
-          interval2Add =
-              divide(rexBuilder,
-                  multiply(rexBuilder,
-                      rexBuilder.makeIntervalLiteral(BigDecimal.ONE, qualifier), op1),
-                  BigDecimal.ONE.divide(unit.multiplier,
-                      RoundingMode.UNNECESSARY));
-          break;
-        default:
-          interval2Add = multiply(rexBuilder,
-              rexBuilder.makeIntervalLiteral(unit.multiplier, qualifier), op1);
+      case MICROSECOND:
+      case NANOSECOND:
+        interval2Add =
+            divide(rexBuilder,
+                multiply(rexBuilder,
+                    rexBuilder.makeIntervalLiteral(BigDecimal.ONE, qualifier), op1),
+                BigDecimal.ONE.divide(unit.multiplier,
+                    RoundingMode.UNNECESSARY));
+        break;
+      default:
+        interval2Add = multiply(rexBuilder,
+            rexBuilder.makeIntervalLiteral(unit.multiplier, qualifier), op1);
       }
 
       return rexBuilder.makeCall(SqlStdOperatorTable.DATETIME_PLUS,
@@ -1478,18 +1478,18 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
           ? SqlTypeName.BIGINT
           : SqlTypeName.INTEGER;
       switch (unit) {
-        case MICROSECOND:
-        case MILLISECOND:
-        case NANOSECOND:
-        case WEEK:
-          multiplier = BigDecimal.valueOf(DateTimeUtils.MILLIS_PER_SECOND);
-          divider = unit.multiplier;
-          unit = TimeUnit.SECOND;
-          break;
-        case QUARTER:
-          divider = unit.multiplier;
-          unit = TimeUnit.MONTH;
-          break;
+      case MICROSECOND:
+      case MILLISECOND:
+      case NANOSECOND:
+      case WEEK:
+        multiplier = BigDecimal.valueOf(DateTimeUtils.MILLIS_PER_SECOND);
+        divider = unit.multiplier;
+        unit = TimeUnit.SECOND;
+        break;
+      case QUARTER:
+        divider = unit.multiplier;
+        unit = TimeUnit.MONTH;
+        break;
       }
       final SqlIntervalQualifier qualifier =
           new SqlIntervalQualifier(unit, null, SqlParserPos.ZERO);

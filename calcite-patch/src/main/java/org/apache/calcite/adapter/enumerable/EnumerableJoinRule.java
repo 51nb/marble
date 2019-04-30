@@ -63,6 +63,24 @@ class EnumerableJoinRule extends ConverterRule {
     if (!info.isEqui() && join.getJoinType() != JoinRelType.INNER) {
       // EnumerableJoinRel only supports equi-join. We can put a filter on top
       // if it is an inner join.
+      boolean hasEquiKeys = !info.leftKeys.isEmpty()
+          && !info.rightKeys.isEmpty();
+      if (hasEquiKeys) {
+        //if a non-equi join has equi keys, we can use a hash-join or
+        // merge-join instead of nested-loop-join to improve the performance
+        try {
+          return new EnumerableThetaHashJoin(
+              cluster,
+              join.getTraitSet().replace(EnumerableConvention.INSTANCE),
+              left,
+              right,
+              join.getCondition(),
+              join.getVariablesSet(),
+              join.getJoinType());
+        } catch (InvalidRelException e) {
+          EnumerableRules.LOGGER.debug(e.toString());
+        }
+      }
       try {
         return new EnumerableThetaJoin(cluster, traitSet, left, right,
             join.getCondition(), join.getVariablesSet(), join.getJoinType());

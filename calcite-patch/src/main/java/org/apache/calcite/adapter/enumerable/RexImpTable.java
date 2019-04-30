@@ -314,7 +314,7 @@ public class RexImpTable {
               new ReflectiveCallNotNullImplementor(BuiltInMethod.RAND_SEED.method)
           };
           public Expression implement(RexToLixTranslator translator,
-                                      RexCall call, List<Expression> translatedOperands) {
+              RexCall call, List<Expression> translatedOperands) {
             return implementors[call.getOperands().size()]
                 .implement(translator, call, translatedOperands);
           }
@@ -329,7 +329,7 @@ public class RexImpTable {
                   BuiltInMethod.RAND_INTEGER_SEED.method)
           };
           public Expression implement(RexToLixTranslator translator,
-                                      RexCall call, List<Expression> translatedOperands) {
+              RexCall call, List<Expression> translatedOperands) {
             return implementors[call.getOperands().size()]
                 .implement(translator, call, translatedOperands);
           }
@@ -574,138 +574,138 @@ public class RexImpTable {
       final NullPolicy nullPolicy,
       final boolean harmonize) {
     switch (nullPolicy) {
-      case ANY:
-      case STRICT:
-      case SEMI_STRICT:
-        return (translator, call, nullAs) -> implementNullSemantics0(
-            translator, call, nullAs, nullPolicy, harmonize,
-            implementor);
-      case AND:
+    case ANY:
+    case STRICT:
+    case SEMI_STRICT:
+      return (translator, call, nullAs) -> implementNullSemantics0(
+          translator, call, nullAs, nullPolicy, harmonize,
+          implementor);
+    case AND:
 /* TODO:
             if (nullAs == NullAs.FALSE) {
                 nullPolicy2 = NullPolicy.ANY;
             }
 */
-        // If any of the arguments are false, result is false;
-        // else if any arguments are null, result is null;
-        // else true.
-        //
-        // b0 == null ? (b1 == null || b1 ? null : Boolean.FALSE)
-        //   : b0 ? b1
-        //   : Boolean.FALSE;
-        return (translator, call, nullAs) -> {
-          assert call.getOperator() == AND
-              : "AND null semantics is supported only for AND operator. Actual operator is "
-              + String.valueOf(call.getOperator());
-          final RexCall call2 = call2(false, translator, call);
+      // If any of the arguments are false, result is false;
+      // else if any arguments are null, result is null;
+      // else true.
+      //
+      // b0 == null ? (b1 == null || b1 ? null : Boolean.FALSE)
+      //   : b0 ? b1
+      //   : Boolean.FALSE;
+      return (translator, call, nullAs) -> {
+        assert call.getOperator() == AND
+            : "AND null semantics is supported only for AND operator. Actual operator is "
+            + String.valueOf(call.getOperator());
+        final RexCall call2 = call2(false, translator, call);
+        switch (nullAs) {
+        case NOT_POSSIBLE: // Just foldAnd
+        case TRUE:
+          // AND call should return false iff has FALSEs,
+          // thus if we convert nulls to true then no harm is made
+        case FALSE:
+          // AND call should return false iff has FALSEs or has NULLs,
+          // thus if we convert nulls to false, no harm is made
+          final List<Expression> expressions =
+              translator.translateList(call2.getOperands(), nullAs);
+          return Expressions.foldAnd(expressions);
+        case NULL:
+        case IS_NULL:
+        case IS_NOT_NULL:
+          final List<Expression> nullAsTrue =
+              translator.translateList(call2.getOperands(), NullAs.TRUE);
+          final List<Expression> nullAsIsNull =
+              translator.translateList(call2.getOperands(), NullAs.IS_NULL);
+          Expression hasFalse =
+              Expressions.not(Expressions.foldAnd(nullAsTrue));
+          Expression hasNull = Expressions.foldOr(nullAsIsNull);
+          return nullAs.handle(
+              Expressions.condition(hasFalse, BOXED_FALSE_EXPR,
+                  Expressions.condition(hasNull, NULL_EXPR, BOXED_TRUE_EXPR)));
+        default:
+          throw new IllegalArgumentException(
+              "Unknown nullAs when implementing AND: " + nullAs);
+        }
+      };
+    case OR:
+      // If any of the arguments are true, result is true;
+      // else if any arguments are null, result is null;
+      // else false.
+      //
+      // b0 == null ? (b1 == null || !b1 ? null : Boolean.TRUE)
+      //   : !b0 ? b1
+      //   : Boolean.TRUE;
+      return (translator, call, nullAs) -> {
+        assert call.getOperator() == OR
+            : "OR null semantics is supported only for OR operator. Actual operator is "
+            + String.valueOf(call.getOperator());
+        final RexCall call2 = call2(harmonize, translator, call);
+        switch (nullAs) {
+        case NOT_POSSIBLE: // Just foldOr
+        case TRUE:
+          // This should return false iff all arguments are FALSE,
+          // thus we convert nulls to TRUE and foldOr
+        case FALSE:
+          // This should return true iff has TRUE arguments,
+          // thus we convert nulls to FALSE and foldOr
+          final List<Expression> expressions =
+              translator.translateList(call2.getOperands(), nullAs);
+          return Expressions.foldOr(expressions);
+        case NULL:
+        case IS_NULL:
+        case IS_NOT_NULL:
+          final List<Expression> nullAsFalse =
+              translator.translateList(call2.getOperands(), NullAs.FALSE);
+          final List<Expression> nullAsIsNull =
+              translator.translateList(call2.getOperands(), NullAs.IS_NULL);
+          Expression hasTrue = Expressions.foldOr(nullAsFalse);
+          Expression hasNull = Expressions.foldOr(nullAsIsNull);
+          Expression result = nullAs.handle(
+              Expressions.condition(hasTrue, BOXED_TRUE_EXPR,
+                  Expressions.condition(hasNull, NULL_EXPR, BOXED_FALSE_EXPR)));
+          return result;
+        default:
+          throw new IllegalArgumentException(
+              "Unknown nullAs when implementing OR: " + nullAs);
+        }
+      };
+    case NOT:
+      // If any of the arguments are false, result is true;
+      // else if any arguments are null, result is null;
+      // else false.
+      return new CallImplementor() {
+        public Expression implement(RexToLixTranslator translator, RexCall call,
+            NullAs nullAs) {
           switch (nullAs) {
-            case NOT_POSSIBLE: // Just foldAnd
-            case TRUE:
-              // AND call should return false iff has FALSEs,
-              // thus if we convert nulls to true then no harm is made
-            case FALSE:
-              // AND call should return false iff has FALSEs or has NULLs,
-              // thus if we convert nulls to false, no harm is made
-              final List<Expression> expressions =
-                  translator.translateList(call2.getOperands(), nullAs);
-              return Expressions.foldAnd(expressions);
-            case NULL:
-            case IS_NULL:
-            case IS_NOT_NULL:
-              final List<Expression> nullAsTrue =
-                  translator.translateList(call2.getOperands(), NullAs.TRUE);
-              final List<Expression> nullAsIsNull =
-                  translator.translateList(call2.getOperands(), NullAs.IS_NULL);
-              Expression hasFalse =
-                  Expressions.not(Expressions.foldAnd(nullAsTrue));
-              Expression hasNull = Expressions.foldOr(nullAsIsNull);
-              return nullAs.handle(
-                  Expressions.condition(hasFalse, BOXED_FALSE_EXPR,
-                      Expressions.condition(hasNull, NULL_EXPR, BOXED_TRUE_EXPR)));
-            default:
-              throw new IllegalArgumentException(
-                  "Unknown nullAs when implementing AND: " + nullAs);
+          case NULL:
+            return Expressions.call(BuiltInMethod.NOT.method,
+                translator.translateList(call.getOperands(), nullAs));
+          default:
+            return Expressions.not(
+                translator.translate(call.getOperands().get(0),
+                    negate(nullAs)));
           }
-        };
-      case OR:
-        // If any of the arguments are true, result is true;
-        // else if any arguments are null, result is null;
-        // else false.
-        //
-        // b0 == null ? (b1 == null || !b1 ? null : Boolean.TRUE)
-        //   : !b0 ? b1
-        //   : Boolean.TRUE;
-        return (translator, call, nullAs) -> {
-          assert call.getOperator() == OR
-              : "OR null semantics is supported only for OR operator. Actual operator is "
-              + String.valueOf(call.getOperator());
-          final RexCall call2 = call2(harmonize, translator, call);
-          switch (nullAs) {
-            case NOT_POSSIBLE: // Just foldOr
-            case TRUE:
-              // This should return false iff all arguments are FALSE,
-              // thus we convert nulls to TRUE and foldOr
-            case FALSE:
-              // This should return true iff has TRUE arguments,
-              // thus we convert nulls to FALSE and foldOr
-              final List<Expression> expressions =
-                  translator.translateList(call2.getOperands(), nullAs);
-              return Expressions.foldOr(expressions);
-            case NULL:
-            case IS_NULL:
-            case IS_NOT_NULL:
-              final List<Expression> nullAsFalse =
-                  translator.translateList(call2.getOperands(), NullAs.FALSE);
-              final List<Expression> nullAsIsNull =
-                  translator.translateList(call2.getOperands(), NullAs.IS_NULL);
-              Expression hasTrue = Expressions.foldOr(nullAsFalse);
-              Expression hasNull = Expressions.foldOr(nullAsIsNull);
-              Expression result = nullAs.handle(
-                  Expressions.condition(hasTrue, BOXED_TRUE_EXPR,
-                      Expressions.condition(hasNull, NULL_EXPR, BOXED_FALSE_EXPR)));
-              return result;
-            default:
-              throw new IllegalArgumentException(
-                  "Unknown nullAs when implementing OR: " + nullAs);
-          }
-        };
-      case NOT:
-        // If any of the arguments are false, result is true;
-        // else if any arguments are null, result is null;
-        // else false.
-        return new CallImplementor() {
-          public Expression implement(RexToLixTranslator translator, RexCall call,
-                                      NullAs nullAs) {
-            switch (nullAs) {
-              case NULL:
-                return Expressions.call(BuiltInMethod.NOT.method,
-                    translator.translateList(call.getOperands(), nullAs));
-              default:
-                return Expressions.not(
-                    translator.translate(call.getOperands().get(0),
-                        negate(nullAs)));
-            }
-          }
+        }
 
-          private NullAs negate(NullAs nullAs) {
-            switch (nullAs) {
-              case FALSE:
-                return NullAs.TRUE;
-              case TRUE:
-                return NullAs.FALSE;
-              default:
-                return nullAs;
-            }
+        private NullAs negate(NullAs nullAs) {
+          switch (nullAs) {
+          case FALSE:
+            return NullAs.TRUE;
+          case TRUE:
+            return NullAs.FALSE;
+          default:
+            return nullAs;
           }
-        };
-      case NONE:
-        return (translator, call, nullAs) -> {
-          final RexCall call2 = call2(false, translator, call);
-          return implementCall(
-              translator, call2, implementor, nullAs);
-        };
-      default:
-        throw new AssertionError(nullPolicy);
+        }
+      };
+    case NONE:
+      return (translator, call, nullAs) -> {
+        final RexCall call2 = call2(false, translator, call);
+        return implementCall(
+            translator, call2, implementor, nullAs);
+      };
+    default:
+      throw new AssertionError(nullPolicy);
     }
   }
 
@@ -768,7 +768,7 @@ public class RexImpTable {
   }
 
   public AggImplementor get(final SqlAggFunction aggregation,
-                            boolean forWindowAggregate) {
+      boolean forWindowAggregate) {
     if (aggregation instanceof SqlUserDefinedAggFunction) {
       final SqlUserDefinedAggFunction udaf =
           (SqlUserDefinedAggFunction) aggregation;
@@ -866,7 +866,7 @@ public class RexImpTable {
   }
 
   private static RelDataType toSql(RelDataTypeFactory typeFactory,
-                                   RelDataType type) {
+      RelDataType type) {
     if (type instanceof RelDataTypeFactoryImpl.JavaType) {
       final SqlTypeName typeName = type.getSqlTypeName();
       if (typeName != null && typeName != SqlTypeName.OTHER) {
@@ -897,26 +897,26 @@ public class RexImpTable {
       boolean harmonize,
       NotNullImplementor implementor) {
     switch (nullAs) {
-      case IS_NOT_NULL:
-        // If "f" is strict, then "f(a0, a1) IS NOT NULL" is
-        // equivalent to "a0 IS NOT NULL AND a1 IS NOT NULL".
-        switch (nullPolicy) {
-          case STRICT:
-            return Expressions.foldAnd(
-                translator.translateList(
-                    call.getOperands(), nullAs));
-        }
-        break;
-      case IS_NULL:
-        // If "f" is strict, then "f(a0, a1) IS NULL" is
-        // equivalent to "a0 IS NULL OR a1 IS NULL".
-        switch (nullPolicy) {
-          case STRICT:
-            return Expressions.foldOr(
-                translator.translateList(
-                    call.getOperands(), nullAs));
-        }
-        break;
+    case IS_NOT_NULL:
+      // If "f" is strict, then "f(a0, a1) IS NOT NULL" is
+      // equivalent to "a0 IS NOT NULL AND a1 IS NOT NULL".
+      switch (nullPolicy) {
+      case STRICT:
+        return Expressions.foldAnd(
+            translator.translateList(
+                call.getOperands(), nullAs));
+      }
+      break;
+    case IS_NULL:
+      // If "f" is strict, then "f(a0, a1) IS NULL" is
+      // equivalent to "a0 IS NULL OR a1 IS NULL".
+      switch (nullPolicy) {
+      case STRICT:
+        return Expressions.foldOr(
+            translator.translateList(
+                call.getOperands(), nullAs));
+      }
+      break;
     }
     final RexCall call2 = call2(harmonize, translator, call);
     try {
@@ -924,14 +924,14 @@ public class RexImpTable {
           translator, call2, nullAs, nullPolicy, implementor);
     } catch (RexToLixTranslator.AlwaysNull e) {
       switch (nullAs) {
-        case NOT_POSSIBLE:
-          throw e;
-        case FALSE:
-          return FALSE_EXPR;
-        case TRUE:
-          return TRUE_EXPR;
-        default:
-          return NULL_EXPR;
+      case NOT_POSSIBLE:
+        throw e;
+      case FALSE:
+        return FALSE_EXPR;
+      case TRUE:
+        return TRUE_EXPR;
+      default:
+        return NULL_EXPR;
       }
     }
   }
@@ -944,71 +944,71 @@ public class RexImpTable {
       NotNullImplementor implementor) {
     final List<Expression> list = new ArrayList<>();
     switch (nullAs) {
-      case NULL:
-        // v0 == null || v1 == null ? null : f(v0, v1)
-        for (Ord<RexNode> operand : Ord.zip(call.getOperands())) {
-          if (translator.isNullable(operand.e)) {
-            list.add(
-                translator.translate(
-                    operand.e, NullAs.IS_NULL));
-            translator = translator.setNullable(operand.e, false);
+    case NULL:
+      // v0 == null || v1 == null ? null : f(v0, v1)
+      for (Ord<RexNode> operand : Ord.zip(call.getOperands())) {
+        if (translator.isNullable(operand.e)) {
+          list.add(
+              translator.translate(
+                  operand.e, NullAs.IS_NULL));
+          translator = translator.setNullable(operand.e, false);
+        }
+      }
+      final Expression box =
+          Expressions.box(
+              implementCall(translator, call, implementor, nullAs));
+      return optimize(
+          Expressions.condition(
+              Expressions.foldOr(list),
+              Types.castIfNecessary(box.getType(), NULL_EXPR),
+              box));
+    case FALSE:
+      // v0 != null && v1 != null && f(v0, v1)
+      for (Ord<RexNode> operand : Ord.zip(call.getOperands())) {
+        if (translator.isNullable(operand.e)) {
+          list.add(
+              translator.translate(
+                  operand.e, NullAs.IS_NOT_NULL));
+          translator = translator.setNullable(operand.e, false);
+        }
+      }
+      list.add(implementCall(translator, call, implementor, nullAs));
+      return Expressions.foldAnd(list);
+    case TRUE:
+      // v0 == null || v1 == null || f(v0, v1)
+      for (Ord<RexNode> operand : Ord.zip(call.getOperands())) {
+        if (translator.isNullable(operand.e)) {
+          list.add(
+              translator.translate(
+                  operand.e, NullAs.IS_NULL));
+          translator = translator.setNullable(operand.e, false);
+        }
+      }
+      list.add(implementCall(translator, call, implementor, nullAs));
+      return Expressions.foldOr(list);
+    case NOT_POSSIBLE:
+      // Need to transmit to the implementor the fact that call cannot
+      // return null. In particular, it should return a primitive (e.g.
+      // int) rather than a box type (Integer).
+      // The cases with setNullable above might not help since the same
+      // RexNode can be referred via multiple ways: RexNode itself, RexLocalRef,
+      // and may be others.
+      final Map<RexNode, Boolean> nullable = new HashMap<>();
+      switch (nullPolicy) {
+      case STRICT:
+        // The arguments should be not nullable if STRICT operator is computed
+        // in nulls NOT_POSSIBLE mode
+        for (RexNode arg : call.getOperands()) {
+          if (translator.isNullable(arg) && !nullable.containsKey(arg)) {
+            nullable.put(arg, false);
           }
         }
-        final Expression box =
-            Expressions.box(
-                implementCall(translator, call, implementor, nullAs));
-        return optimize(
-            Expressions.condition(
-                Expressions.foldOr(list),
-                Types.castIfNecessary(box.getType(), NULL_EXPR),
-                box));
-      case FALSE:
-        // v0 != null && v1 != null && f(v0, v1)
-        for (Ord<RexNode> operand : Ord.zip(call.getOperands())) {
-          if (translator.isNullable(operand.e)) {
-            list.add(
-                translator.translate(
-                    operand.e, NullAs.IS_NOT_NULL));
-            translator = translator.setNullable(operand.e, false);
-          }
-        }
-        list.add(implementCall(translator, call, implementor, nullAs));
-        return Expressions.foldAnd(list);
-      case TRUE:
-        // v0 == null || v1 == null || f(v0, v1)
-        for (Ord<RexNode> operand : Ord.zip(call.getOperands())) {
-          if (translator.isNullable(operand.e)) {
-            list.add(
-                translator.translate(
-                    operand.e, NullAs.IS_NULL));
-            translator = translator.setNullable(operand.e, false);
-          }
-        }
-        list.add(implementCall(translator, call, implementor, nullAs));
-        return Expressions.foldOr(list);
-      case NOT_POSSIBLE:
-        // Need to transmit to the implementor the fact that call cannot
-        // return null. In particular, it should return a primitive (e.g.
-        // int) rather than a box type (Integer).
-        // The cases with setNullable above might not help since the same
-        // RexNode can be referred via multiple ways: RexNode itself, RexLocalRef,
-        // and may be others.
-        final Map<RexNode, Boolean> nullable = new HashMap<>();
-        switch (nullPolicy) {
-          case STRICT:
-            // The arguments should be not nullable if STRICT operator is computed
-            // in nulls NOT_POSSIBLE mode
-            for (RexNode arg : call.getOperands()) {
-              if (translator.isNullable(arg) && !nullable.containsKey(arg)) {
-                nullable.put(arg, false);
-              }
-            }
-        }
-        nullable.put(call, false);
-        translator = translator.setNullable(nullable);
-        // fall through
-      default:
-        return implementCall(translator, call, implementor, nullAs);
+      }
+      nullable.put(call, false);
+      translator = translator.setNullable(nullable);
+      // fall through
+    default:
+      return implementCall(translator, call, implementor, nullAs);
     }
   }
 
@@ -1078,48 +1078,48 @@ public class RexImpTable {
      * this particular policy. */
     public Expression handle(Expression x) {
       switch (Primitive.flavor(x.getType())) {
-        case PRIMITIVE:
-          // Expression cannot be null. We can skip any runtime checks.
-          switch (this) {
-            case NULL:
-            case NOT_POSSIBLE:
-            case FALSE:
-            case TRUE:
-              return x;
-            case IS_NULL:
-              return FALSE_EXPR;
-            case IS_NOT_NULL:
-              return TRUE_EXPR;
-            default:
-              throw new AssertionError();
-          }
-        case BOX:
-          switch (this) {
-            case NOT_POSSIBLE:
-              return RexToLixTranslator.convert(
-                  x,
-                  Primitive.ofBox(x.getType()).primitiveClass);
-          }
-          // fall through
-      }
-      switch (this) {
+      case PRIMITIVE:
+        // Expression cannot be null. We can skip any runtime checks.
+        switch (this) {
         case NULL:
         case NOT_POSSIBLE:
-          return x;
         case FALSE:
-          return Expressions.call(
-              BuiltInMethod.IS_TRUE.method,
-              x);
         case TRUE:
-          return Expressions.call(
-              BuiltInMethod.IS_NOT_FALSE.method,
-              x);
+          return x;
         case IS_NULL:
-          return Expressions.equal(x, NULL_EXPR);
+          return FALSE_EXPR;
         case IS_NOT_NULL:
-          return Expressions.notEqual(x, NULL_EXPR);
+          return TRUE_EXPR;
         default:
           throw new AssertionError();
+        }
+      case BOX:
+        switch (this) {
+        case NOT_POSSIBLE:
+          return RexToLixTranslator.convert(
+              x,
+              Primitive.ofBox(x.getType()).primitiveClass);
+        }
+        // fall through
+      }
+      switch (this) {
+      case NULL:
+      case NOT_POSSIBLE:
+        return x;
+      case FALSE:
+        return Expressions.call(
+            BuiltInMethod.IS_TRUE.method,
+            x);
+      case TRUE:
+        return Expressions.call(
+            BuiltInMethod.IS_NOT_FALSE.method,
+            x);
+      case IS_NULL:
+        return Expressions.equal(x, NULL_EXPR);
+      case IS_NOT_NULL:
+        return Expressions.notEqual(x, NULL_EXPR);
+      default:
+        throw new AssertionError();
       }
     }
   }
@@ -1138,7 +1138,7 @@ public class RexImpTable {
    * <p>For example, {@code multiplyDivide(e, 10, 1000)} returns
    * {@code e / 100}. */
   public static Expression multiplyDivide(Expression e, BigDecimal multiplier,
-                                          BigDecimal divider) {
+      BigDecimal divider) {
     if (multiplier.equals(BigDecimal.ONE)) {
       if (divider.equals(BigDecimal.ONE)) {
         return e;
@@ -1149,21 +1149,21 @@ public class RexImpTable {
     final BigDecimal x =
         multiplier.divide(divider, RoundingMode.UNNECESSARY);
     switch (x.compareTo(BigDecimal.ONE)) {
-      case 0:
-        return e;
-      case 1:
-        return Expressions.multiply(e, Expressions.constant(x.intValueExact()));
-      case -1:
-        return multiplyDivide(e, BigDecimal.ONE, x);
-      default:
-        throw new AssertionError();
+    case 0:
+      return e;
+    case 1:
+      return Expressions.multiply(e, Expressions.constant(x.intValueExact()));
+    case -1:
+      return multiplyDivide(e, BigDecimal.ONE, x);
+    default:
+      throw new AssertionError();
     }
   }
 
   /** Implementor for the {@code COUNT} aggregate function. */
   static class CountImplementor extends StrictAggImplementor {
     @Override public void implementNotNullAdd(AggContext info,
-                                              AggAddContext add) {
+        AggAddContext add) {
       add.currentBlock().add(
           Expressions.statement(
               Expressions.postIncrementAssign(add.accumulator().get(0))));
@@ -1190,7 +1190,7 @@ public class RexImpTable {
     }
 
     @Override public void implementNotNullAdd(WinAggContext info,
-                                              WinAggAddContext add) {
+        WinAggAddContext add) {
       if (justFrameRowCount) {
         return;
       }
@@ -1200,7 +1200,7 @@ public class RexImpTable {
     }
 
     @Override protected Expression implementNotNullResult(WinAggContext info,
-                                                          WinAggResultContext result) {
+        WinAggResultContext result) {
       if (justFrameRowCount) {
         return result.getFrameRowCount();
       }
@@ -1211,7 +1211,7 @@ public class RexImpTable {
   /** Implementor for the {@code SUM} windowed aggregate function. */
   static class SumImplementor extends StrictAggImplementor {
     @Override protected void implementNotNullReset(AggContext info,
-                                                   AggResetContext reset) {
+        AggResetContext reset) {
       Expression start = info.returnType() == BigDecimal.class
           ? Expressions.constant(BigDecimal.ZERO)
           : Expressions.constant(0);
@@ -1222,7 +1222,7 @@ public class RexImpTable {
     }
 
     @Override public void implementNotNullAdd(AggContext info,
-                                              AggAddContext add) {
+        AggAddContext add) {
       Expression acc = add.accumulator().get(0);
       Expression next;
       if (info.returnType() == BigDecimal.class) {
@@ -1235,7 +1235,7 @@ public class RexImpTable {
     }
 
     @Override public Expression implementNotNullResult(AggContext info,
-                                                       AggResultContext result) {
+        AggResultContext result) {
       return super.implementNotNullResult(info, result);
     }
   }
@@ -1243,7 +1243,7 @@ public class RexImpTable {
   /** Implementor for the {@code MIN} and {@code MAX} aggregate functions. */
   static class MinMaxImplementor extends StrictAggImplementor {
     @Override protected void implementNotNullReset(AggContext info,
-                                                   AggResetContext reset) {
+        AggResetContext reset) {
       Expression acc = reset.accumulator().get(0);
       Primitive p = Primitive.of(acc.getType());
       boolean isMin = MIN == info.aggregation();
@@ -1255,7 +1255,7 @@ public class RexImpTable {
     }
 
     @Override public void implementNotNullAdd(AggContext info,
-                                              AggAddContext add) {
+        AggAddContext add) {
       Expression acc = add.accumulator().get(0);
       Expression arg = add.arguments().get(0);
       SqlAggFunction aggregation = info.aggregation();
@@ -1306,7 +1306,7 @@ public class RexImpTable {
     }
 
     public Expression implementResult(AggContext info,
-                                      AggResultContext result) {
+        AggResultContext result) {
       return RexToLixTranslator.convert(result.accumulator().get(1),
           info.returnType());
     }
@@ -1315,7 +1315,7 @@ public class RexImpTable {
   /** Implementor for the {@code COLLECT} aggregate function. */
   static class CollectImplementor extends StrictAggImplementor {
     @Override protected void implementNotNullReset(AggContext info,
-                                                   AggResetContext reset) {
+        AggResetContext reset) {
       // acc[0] = new ArrayList();
       reset.currentBlock().add(
           Expressions.statement(
@@ -1324,7 +1324,7 @@ public class RexImpTable {
     }
 
     @Override public void implementNotNullAdd(AggContext info,
-                                              AggAddContext add) {
+        AggAddContext add) {
       // acc[0].add(arg);
       add.currentBlock().add(
           Expressions.statement(
@@ -1337,7 +1337,7 @@ public class RexImpTable {
   /** Implementor for the {@code FUSION} aggregate function. */
   static class FusionImplementor extends StrictAggImplementor {
     @Override protected void implementNotNullReset(AggContext info,
-                                                   AggResetContext reset) {
+        AggResetContext reset) {
       // acc[0] = new ArrayList();
       reset.currentBlock().add(
           Expressions.statement(
@@ -1346,7 +1346,7 @@ public class RexImpTable {
     }
 
     @Override public void implementNotNullAdd(AggContext info,
-                                              AggAddContext add) {
+        AggAddContext add) {
       // acc[0].add(arg);
       add.currentBlock().add(
           Expressions.statement(
@@ -1369,20 +1369,20 @@ public class RexImpTable {
     }
 
     public Expression implementResult(AggContext info,
-                                      AggResultContext result) {
+        AggResultContext result) {
       final List<Integer> keys;
       switch (info.aggregation().kind) {
-        case GROUPING: // "GROUPING(e, ...)", also "GROUPING_ID(e, ...)"
-          keys = result.call().getArgList();
-          break;
-        case GROUP_ID: // "GROUP_ID()"
-          // We don't implement GROUP_ID properly. In most circumstances, it
-          // returns 0, so we always return 0. Logged
-          // [CALCITE-1824] GROUP_ID returns wrong result
-          keys = ImmutableIntList.of();
-          break;
-        default:
-          throw new AssertionError();
+      case GROUPING: // "GROUPING(e, ...)", also "GROUPING_ID(e, ...)"
+        keys = result.call().getArgList();
+        break;
+      case GROUP_ID: // "GROUP_ID()"
+        // We don't implement GROUP_ID properly. In most circumstances, it
+        // returns 0, so we always return 0. Logged
+        // [CALCITE-1824] GROUP_ID returns wrong result
+        keys = ImmutableIntList.of();
+        break;
+      default:
+        throw new AssertionError();
       }
       Expression e = null;
       if (info.groupSets().size() > 1) {
@@ -1424,7 +1424,7 @@ public class RexImpTable {
     }
 
     @Override protected void implementNotNullReset(AggContext info,
-                                                   AggResetContext reset) {
+        AggResetContext reset) {
       List<Expression> acc = reset.accumulator();
       if (!afi.isStatic) {
         reset.currentBlock().add(
@@ -1441,7 +1441,7 @@ public class RexImpTable {
     }
 
     @Override protected void implementNotNullAdd(AggContext info,
-                                                 AggAddContext add) {
+        AggAddContext add) {
       List<Expression> acc = add.accumulator();
       List<Expression> aggArgs = add.arguments();
       List<Expression> args = new ArrayList<>(aggArgs.size() + 1);
@@ -1455,7 +1455,7 @@ public class RexImpTable {
     }
 
     @Override protected Expression implementNotNullResult(AggContext info,
-                                                          AggResultContext result) {
+        AggResultContext result) {
       List<Expression> acc = result.accumulator();
       return Expressions.call(
           afi.isStatic ? null : acc.get(1), afi.resultMethod, acc.get(0));
@@ -1465,7 +1465,7 @@ public class RexImpTable {
   /** Implementor for the {@code RANK} windowed aggregate function. */
   static class RankImplementor extends StrictWinAggImplementor {
     @Override protected void implementNotNullAdd(WinAggContext info,
-                                                 WinAggAddContext add) {
+        WinAggAddContext add) {
       Expression acc = add.accumulator().get(0);
       // This is an example of the generated code
       if (false) {
@@ -1524,7 +1524,7 @@ public class RexImpTable {
   /** Implementor for the {@code DENSE_RANK} windowed aggregate function. */
   static class DenseRankImplementor extends RankImplementor {
     @Override protected Expression computeNewRank(Expression acc,
-                                                  WinAggAddContext add) {
+        WinAggAddContext add) {
       return Expressions.add(acc, Expressions.constant(1));
     }
   }
@@ -1555,7 +1555,7 @@ public class RexImpTable {
     }
 
     public Expression implementResult(AggContext info,
-                                      AggResultContext result) {
+        AggResultContext result) {
       WinAggResultContext winResult = (WinAggResultContext) result;
 
       return Expressions.condition(winResult.hasRows(),
@@ -1600,7 +1600,7 @@ public class RexImpTable {
     }
 
     public Expression implementResult(AggContext info,
-                                      AggResultContext result) {
+        AggResultContext result) {
       WinAggResultContext winResult = (WinAggResultContext) result;
 
       List<RexNode> rexArgs = winResult.rexArguments();
@@ -1662,7 +1662,7 @@ public class RexImpTable {
     }
 
     public Expression implementResult(AggContext info,
-                                      AggResultContext result) {
+        AggResultContext result) {
       WinAggResultContext winResult = (WinAggResultContext) result;
 
       List<RexNode> rexArgs = winResult.rexArguments();
@@ -1740,7 +1740,7 @@ public class RexImpTable {
     }
 
     public Expression implementResult(AggContext info,
-                                      AggResultContext result) {
+        AggResultContext result) {
       WinAggResultContext winResult = (WinAggResultContext) result;
 
       List<RexNode> rexArgs = winResult.rexArguments();
@@ -1769,7 +1769,7 @@ public class RexImpTable {
     }
 
     @Override protected void implementNotNullAdd(WinAggContext info,
-                                                 WinAggAddContext add) {
+        WinAggAddContext add) {
       // no op
     }
 
@@ -1799,7 +1799,7 @@ public class RexImpTable {
     }
 
     @Override public void implementReset(AggContext info,
-                                         AggResetContext reset) {
+        AggResetContext reset) {
       reset.currentBlock().add(
           Expressions.statement(
               Expressions.assign(reset.accumulator().get(0),
@@ -1820,7 +1820,7 @@ public class RexImpTable {
     }
 
     @Override public Expression implementResult(AggContext info,
-                                                AggResultContext result) {
+        AggResultContext result) {
       return Expressions.call(BuiltInMethod.JSONIZE.method,
           result.accumulator().get(0));
     }
@@ -1843,7 +1843,7 @@ public class RexImpTable {
     }
 
     @Override public void implementReset(AggContext info,
-                                         AggResetContext reset) {
+        AggResetContext reset) {
       reset.currentBlock().add(
           Expressions.statement(
               Expressions.assign(reset.accumulator().get(0),
@@ -1851,7 +1851,7 @@ public class RexImpTable {
     }
 
     @Override public void implementAdd(AggContext info,
-                                       AggAddContext add) {
+        AggAddContext add) {
       final SqlJsonArrayAggAggFunction function =
           (SqlJsonArrayAggAggFunction) info.aggregation();
       add.currentBlock().add(
@@ -1865,7 +1865,7 @@ public class RexImpTable {
     }
 
     @Override public Expression implementResult(AggContext info,
-                                                AggResultContext result) {
+        AggResultContext result) {
       return Expressions.call(BuiltInMethod.JSONIZE.method,
           result.accumulator().get(0));
     }
@@ -1874,7 +1874,7 @@ public class RexImpTable {
   /** Implementor for the {@code TRIM} function. */
   private static class TrimImplementor implements NotNullImplementor {
     public Expression implement(RexToLixTranslator translator, RexCall call,
-                                List<Expression> translatedOperands) {
+        List<Expression> translatedOperands) {
       final boolean strict = !translator.conformance.allowExtendedTrim();
       final Object value =
           ((ConstantExpression) translatedOperands.get(0)).value;
@@ -1899,61 +1899,61 @@ public class RexImpTable {
     final Method dateMethod;
 
     FloorImplementor(String methodName, Method timestampMethod,
-                     Method dateMethod) {
+        Method dateMethod) {
       super(methodName);
       this.timestampMethod = timestampMethod;
       this.dateMethod = dateMethod;
     }
 
     public Expression implement(RexToLixTranslator translator, RexCall call,
-                                List<Expression> translatedOperands) {
+        List<Expression> translatedOperands) {
       switch (call.getOperands().size()) {
-        case 1:
-          switch (call.getType().getSqlTypeName()) {
-            case BIGINT:
-            case INTEGER:
-            case SMALLINT:
-            case TINYINT:
-              return translatedOperands.get(0);
-          }
-          return super.implement(translator, call, translatedOperands);
-        case 2:
-          final Type type;
-          final Method floorMethod;
-          Expression operand = translatedOperands.get(0);
-          switch (call.getType().getSqlTypeName()) {
-            case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-              operand = Expressions.call(
-                  BuiltInMethod.TIMESTAMP_WITH_LOCAL_TIME_ZONE_TO_TIMESTAMP.method,
-                  operand,
-                  Expressions.call(BuiltInMethod.TIME_ZONE.method, translator.getRoot()));
-              // fall through
-            case TIMESTAMP:
-              type = long.class;
-              floorMethod = timestampMethod;
-              break;
-            default:
-              type = int.class;
-              floorMethod = dateMethod;
-          }
-          final ConstantExpression tur =
-              (ConstantExpression) translatedOperands.get(1);
-          final TimeUnitRange timeUnitRange = (TimeUnitRange) tur.value;
-          switch (timeUnitRange) {
-            case YEAR:
-            case MONTH:
-              return Expressions.call(floorMethod, tur,
-                  call(operand, type, TimeUnit.DAY));
-            default:
-              return call(operand, type, timeUnitRange.startUnit);
-          }
+      case 1:
+        switch (call.getType().getSqlTypeName()) {
+        case BIGINT:
+        case INTEGER:
+        case SMALLINT:
+        case TINYINT:
+          return translatedOperands.get(0);
+        }
+        return super.implement(translator, call, translatedOperands);
+      case 2:
+        final Type type;
+        final Method floorMethod;
+        Expression operand = translatedOperands.get(0);
+        switch (call.getType().getSqlTypeName()) {
+        case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
+          operand = Expressions.call(
+              BuiltInMethod.TIMESTAMP_WITH_LOCAL_TIME_ZONE_TO_TIMESTAMP.method,
+              operand,
+              Expressions.call(BuiltInMethod.TIME_ZONE.method, translator.getRoot()));
+          // fall through
+        case TIMESTAMP:
+          type = long.class;
+          floorMethod = timestampMethod;
+          break;
         default:
-          throw new AssertionError();
+          type = int.class;
+          floorMethod = dateMethod;
+        }
+        final ConstantExpression tur =
+            (ConstantExpression) translatedOperands.get(1);
+        final TimeUnitRange timeUnitRange = (TimeUnitRange) tur.value;
+        switch (timeUnitRange) {
+        case YEAR:
+        case MONTH:
+          return Expressions.call(floorMethod, tur,
+              call(operand, type, TimeUnit.DAY));
+        default:
+          return call(operand, type, timeUnitRange.startUnit);
+        }
+      default:
+        throw new AssertionError();
       }
     }
 
     private Expression call(Expression operand, Type type,
-                            TimeUnit timeUnit) {
+        TimeUnit timeUnit) {
       return Expressions.call(SqlFunctions.class, methodName,
           Types.castIfNecessary(type, operand),
           Types.castIfNecessary(type,
@@ -2095,7 +2095,7 @@ public class RexImpTable {
     }
 
     private Expression callBackupMethodAnyType(RexToLixTranslator translator,
-                                               RexCall call, List<Expression> expressions) {
+        RexCall call, List<Expression> expressions) {
       final String backupMethodNameForAnyType =
           backupMethodName + METHOD_POSTFIX_FOR_ANY_TYPE;
 
@@ -2141,7 +2141,7 @@ public class RexImpTable {
   /** Implementor for the {@code EXTRACT(unit FROM datetime)} function. */
   private static class ExtractImplementor implements NotNullImplementor {
     public Expression implement(RexToLixTranslator translator, RexCall call,
-                                List<Expression> translatedOperands) {
+        List<Expression> translatedOperands) {
       final TimeUnitRange timeUnitRange =
           (TimeUnitRange) ((ConstantExpression) translatedOperands.get(0)).value;
       final TimeUnit unit = timeUnitRange.startUnit;
@@ -2149,101 +2149,101 @@ public class RexImpTable {
       final SqlTypeName sqlTypeName =
           call.operands.get(1).getType().getSqlTypeName();
       switch (unit) {
-        case MILLENNIUM:
-        case CENTURY:
-        case YEAR:
-        case QUARTER:
-        case MONTH:
-        case DAY:
-        case DOW:
-        case DECADE:
-        case DOY:
-        case ISODOW:
-        case ISOYEAR:
-        case WEEK:
-          switch (sqlTypeName) {
-            case INTERVAL_YEAR:
-            case INTERVAL_YEAR_MONTH:
-            case INTERVAL_MONTH:
-            case INTERVAL_DAY:
-            case INTERVAL_DAY_HOUR:
-            case INTERVAL_DAY_MINUTE:
-            case INTERVAL_DAY_SECOND:
-            case INTERVAL_HOUR:
-            case INTERVAL_HOUR_MINUTE:
-            case INTERVAL_HOUR_SECOND:
-            case INTERVAL_MINUTE:
-            case INTERVAL_MINUTE_SECOND:
-            case INTERVAL_SECOND:
-              break;
-            case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-              operand = Expressions.call(
-                  BuiltInMethod.TIMESTAMP_WITH_LOCAL_TIME_ZONE_TO_TIMESTAMP.method,
-                  operand,
-                  Expressions.call(BuiltInMethod.TIME_ZONE.method, translator.getRoot()));
-              // fall through
-            case TIMESTAMP:
-              operand = Expressions.divide(operand,
-                  Expressions.constant(TimeUnit.DAY.multiplier.longValue()));
-              // fall through
-            case DATE:
-              return Expressions.call(BuiltInMethod.UNIX_DATE_EXTRACT.method,
-                  translatedOperands.get(0), operand);
-            default:
-              throw new AssertionError("unexpected " + sqlTypeName);
-          }
+      case MILLENNIUM:
+      case CENTURY:
+      case YEAR:
+      case QUARTER:
+      case MONTH:
+      case DAY:
+      case DOW:
+      case DECADE:
+      case DOY:
+      case ISODOW:
+      case ISOYEAR:
+      case WEEK:
+        switch (sqlTypeName) {
+        case INTERVAL_YEAR:
+        case INTERVAL_YEAR_MONTH:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_DAY_HOUR:
+        case INTERVAL_DAY_MINUTE:
+        case INTERVAL_DAY_SECOND:
+        case INTERVAL_HOUR:
+        case INTERVAL_HOUR_MINUTE:
+        case INTERVAL_HOUR_SECOND:
+        case INTERVAL_MINUTE:
+        case INTERVAL_MINUTE_SECOND:
+        case INTERVAL_SECOND:
           break;
-        case MILLISECOND:
-          return Expressions.modulo(
-              operand, Expressions.constant(TimeUnit.MINUTE.multiplier.longValue()));
-        case MICROSECOND:
-          operand = Expressions.modulo(
-              operand, Expressions.constant(TimeUnit.MINUTE.multiplier.longValue()));
-          return Expressions.multiply(
-              operand, Expressions.constant(TimeUnit.SECOND.multiplier.longValue()));
-        case EPOCH:
-          switch (sqlTypeName) {
-            case DATE:
-              // convert to milliseconds
-              operand = Expressions.multiply(operand,
-                  Expressions.constant(TimeUnit.DAY.multiplier.longValue()));
-              // fall through
-            case TIMESTAMP:
-              // convert to seconds
-              return Expressions.divide(operand,
-                  Expressions.constant(TimeUnit.SECOND.multiplier.longValue()));
-            case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-              operand = Expressions.call(
-                  BuiltInMethod.TIMESTAMP_WITH_LOCAL_TIME_ZONE_TO_TIMESTAMP.method,
-                  operand,
-                  Expressions.call(BuiltInMethod.TIME_ZONE.method, translator.getRoot()));
-              return Expressions.divide(operand,
-                  Expressions.constant(TimeUnit.SECOND.multiplier.longValue()));
-            case INTERVAL_YEAR:
-            case INTERVAL_YEAR_MONTH:
-            case INTERVAL_MONTH:
-            case INTERVAL_DAY:
-            case INTERVAL_DAY_HOUR:
-            case INTERVAL_DAY_MINUTE:
-            case INTERVAL_DAY_SECOND:
-            case INTERVAL_HOUR:
-            case INTERVAL_HOUR_MINUTE:
-            case INTERVAL_HOUR_SECOND:
-            case INTERVAL_MINUTE:
-            case INTERVAL_MINUTE_SECOND:
-            case INTERVAL_SECOND:
-              // no convertlet conversion, pass it as extract
-              throw new AssertionError("unexpected " + sqlTypeName);
-          }
-          break;
-        case HOUR:
-        case MINUTE:
-        case SECOND:
-          switch (sqlTypeName) {
-            case DATE:
-              return Expressions.multiply(operand, Expressions.constant(0L));
-          }
-          break;
+        case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
+          operand = Expressions.call(
+              BuiltInMethod.TIMESTAMP_WITH_LOCAL_TIME_ZONE_TO_TIMESTAMP.method,
+              operand,
+              Expressions.call(BuiltInMethod.TIME_ZONE.method, translator.getRoot()));
+          // fall through
+        case TIMESTAMP:
+          operand = Expressions.divide(operand,
+              Expressions.constant(TimeUnit.DAY.multiplier.longValue()));
+          // fall through
+        case DATE:
+          return Expressions.call(BuiltInMethod.UNIX_DATE_EXTRACT.method,
+              translatedOperands.get(0), operand);
+        default:
+          throw new AssertionError("unexpected " + sqlTypeName);
+        }
+        break;
+      case MILLISECOND:
+        return Expressions.modulo(
+            operand, Expressions.constant(TimeUnit.MINUTE.multiplier.longValue()));
+      case MICROSECOND:
+        operand = Expressions.modulo(
+            operand, Expressions.constant(TimeUnit.MINUTE.multiplier.longValue()));
+        return Expressions.multiply(
+            operand, Expressions.constant(TimeUnit.SECOND.multiplier.longValue()));
+      case EPOCH:
+        switch (sqlTypeName) {
+        case DATE:
+          // convert to milliseconds
+          operand = Expressions.multiply(operand,
+              Expressions.constant(TimeUnit.DAY.multiplier.longValue()));
+          // fall through
+        case TIMESTAMP:
+          // convert to seconds
+          return Expressions.divide(operand,
+              Expressions.constant(TimeUnit.SECOND.multiplier.longValue()));
+        case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
+          operand = Expressions.call(
+              BuiltInMethod.TIMESTAMP_WITH_LOCAL_TIME_ZONE_TO_TIMESTAMP.method,
+              operand,
+              Expressions.call(BuiltInMethod.TIME_ZONE.method, translator.getRoot()));
+          return Expressions.divide(operand,
+              Expressions.constant(TimeUnit.SECOND.multiplier.longValue()));
+        case INTERVAL_YEAR:
+        case INTERVAL_YEAR_MONTH:
+        case INTERVAL_MONTH:
+        case INTERVAL_DAY:
+        case INTERVAL_DAY_HOUR:
+        case INTERVAL_DAY_MINUTE:
+        case INTERVAL_DAY_SECOND:
+        case INTERVAL_HOUR:
+        case INTERVAL_HOUR_MINUTE:
+        case INTERVAL_HOUR_SECOND:
+        case INTERVAL_MINUTE:
+        case INTERVAL_MINUTE_SECOND:
+        case INTERVAL_SECOND:
+          // no convertlet conversion, pass it as extract
+          throw new AssertionError("unexpected " + sqlTypeName);
+        }
+        break;
+      case HOUR:
+      case MINUTE:
+      case SECOND:
+        switch (sqlTypeName) {
+        case DATE:
+          return Expressions.multiply(operand, Expressions.constant(0L));
+        }
+        break;
       }
 
       operand = mod(operand, getFactor(unit));
@@ -2270,39 +2270,39 @@ public class RexImpTable {
 
   private static long getFactor(TimeUnit unit) {
     switch (unit) {
-      case DAY:
-        return 1L;
-      case HOUR:
-        return TimeUnit.DAY.multiplier.longValue();
-      case MINUTE:
-        return TimeUnit.HOUR.multiplier.longValue();
-      case SECOND:
-        return TimeUnit.MINUTE.multiplier.longValue();
-      case MILLISECOND:
-        return TimeUnit.SECOND.multiplier.longValue();
-      case MONTH:
-        return TimeUnit.YEAR.multiplier.longValue();
-      case QUARTER:
-        return TimeUnit.YEAR.multiplier.longValue();
-      case YEAR:
-      case DECADE:
-      case CENTURY:
-      case MILLENNIUM:
-        return 1L;
-      default:
-        throw Util.unexpected(unit);
+    case DAY:
+      return 1L;
+    case HOUR:
+      return TimeUnit.DAY.multiplier.longValue();
+    case MINUTE:
+      return TimeUnit.HOUR.multiplier.longValue();
+    case SECOND:
+      return TimeUnit.MINUTE.multiplier.longValue();
+    case MILLISECOND:
+      return TimeUnit.SECOND.multiplier.longValue();
+    case MONTH:
+      return TimeUnit.YEAR.multiplier.longValue();
+    case QUARTER:
+      return TimeUnit.YEAR.multiplier.longValue();
+    case YEAR:
+    case DECADE:
+    case CENTURY:
+    case MILLENNIUM:
+      return 1L;
+    default:
+      throw Util.unexpected(unit);
     }
   }
 
   /** Implementor for the SQL {@code CASE} operator. */
   private static class CaseImplementor implements CallImplementor {
     public Expression implement(RexToLixTranslator translator, RexCall call,
-                                NullAs nullAs) {
+        NullAs nullAs) {
       return implementRecurse(translator, call, nullAs, 0);
     }
 
     private Expression implementRecurse(RexToLixTranslator translator,
-                                        RexCall call, NullAs nullAs, int i) {
+        RexCall call, NullAs nullAs, int i) {
       List<RexNode> operands = call.getOperands();
       if (i == operands.size() - 1) {
         // the "else" clause
@@ -2342,12 +2342,12 @@ public class RexImpTable {
   /** Implementor for the SQL {@code COALESCE} operator. */
   private static class CoalesceImplementor implements CallImplementor {
     public Expression implement(RexToLixTranslator translator, RexCall call,
-                                NullAs nullAs) {
+        NullAs nullAs) {
       return implementRecurse(translator, call.operands, nullAs);
     }
 
     private Expression implementRecurse(RexToLixTranslator translator,
-                                        List<RexNode> operands, NullAs nullAs) {
+        List<RexNode> operands, NullAs nullAs) {
       if (operands.size() == 1) {
         return translator.translate(operands.get(0));
       } else {
@@ -2370,7 +2370,7 @@ public class RexImpTable {
     }
 
     public Expression implement(RexToLixTranslator translator, RexCall call,
-                                NullAs nullAs) {
+        NullAs nullAs) {
       // Short-circuit if no cast is required
       RexNode arg = call.getOperands().get(0);
       if (call.getType().equals(arg.getType())) {
@@ -2390,7 +2390,7 @@ public class RexImpTable {
   }
 
   /** Implementor for the SQL {@code CAST} operator. */
-  private static class CastImplementor implements NotNullImplementor {
+  public static class CastImplementor implements NotNullImplementor {
     public Expression implement(
         RexToLixTranslator translator,
         RexCall call,
@@ -2437,8 +2437,19 @@ public class RexImpTable {
   }
 
   /** Implementor for the {@code ITEM} SQL operator. */
-  private static class ItemImplementor
+  public static class ItemImplementor
       implements CallImplementor {
+
+    boolean isIndexFromZero = false;
+
+    public ItemImplementor() {
+      this(false);
+    }
+
+    public ItemImplementor(boolean isIndexFromZero) {
+      this.isIndexFromZero = isIndexFromZero;
+    }
+
     public Expression implement(
         RexToLixTranslator translator,
         RexCall call,
@@ -2457,12 +2468,17 @@ public class RexImpTable {
 
     private MethodImplementor getImplementor(SqlTypeName sqlTypeName) {
       switch (sqlTypeName) {
-        case ARRAY:
+      case ARRAY:
+        if (isIndexFromZero) {
+          return new MethodImplementor(
+              BuiltInMethod.ARRAY_ITEM_INDEX_FROM_ZERO.method);
+        } else {
           return new MethodImplementor(BuiltInMethod.ARRAY_ITEM.method);
-        case MAP:
-          return new MethodImplementor(BuiltInMethod.MAP_ITEM.method);
-        default:
-          return new MethodImplementor(BuiltInMethod.ANY_ITEM.method);
+        }
+      case MAP:
+        return new MethodImplementor(BuiltInMethod.MAP_ITEM.method);
+      default:
+        return new MethodImplementor(BuiltInMethod.ANY_ITEM.method);
       }
     }
   }
@@ -2478,10 +2494,10 @@ public class RexImpTable {
         RexCall call,
         NullAs nullAs) {
       switch (nullAs) {
-        case IS_NULL:
-          return Expressions.constant(false);
-        case IS_NOT_NULL:
-          return Expressions.constant(true);
+      case IS_NULL:
+        return Expressions.constant(false);
+      case IS_NOT_NULL:
+        return Expressions.constant(true);
       }
       final SqlOperator op = call.getOperator();
       final Expression root = translator.getRoot();
@@ -2547,14 +2563,14 @@ public class RexImpTable {
   }
 
   /** Implementor for the {@code NOT} operator. */
-  private static class NotImplementor implements NotNullImplementor {
+  public static class NotImplementor implements NotNullImplementor {
     private final NotNullImplementor implementor;
 
-    NotImplementor(NotNullImplementor implementor) {
+    public NotImplementor(NotNullImplementor implementor) {
       this.implementor = implementor;
     }
 
-    private static NotNullImplementor of(NotNullImplementor implementor) {
+    public static NotNullImplementor of(NotNullImplementor implementor) {
       return new NotImplementor(implementor);
     }
 
@@ -2572,7 +2588,7 @@ public class RexImpTable {
   private static class DatetimeArithmeticImplementor
       implements NotNullImplementor {
     public Expression implement(RexToLixTranslator translator, RexCall call,
-                                List<Expression> translatedOperands) {
+        List<Expression> translatedOperands) {
       final RexNode operand0 = call.getOperands().get(0);
       Expression trop0 = translatedOperands.get(0);
       final SqlTypeName typeName1 =
@@ -2580,106 +2596,120 @@ public class RexImpTable {
       Expression trop1 = translatedOperands.get(1);
       final SqlTypeName typeName = call.getType().getSqlTypeName();
       switch (operand0.getType().getSqlTypeName()) {
-        case DATE:
-          switch (typeName) {
-            case TIMESTAMP:
-              trop0 = Expressions.convert_(
-                  Expressions.multiply(trop0,
-                      Expressions.constant(DateTimeUtils.MILLIS_PER_DAY)),
-                  long.class);
-              break;
-            default:
-              switch (typeName1) {
-                case INTERVAL_DAY:
-                case INTERVAL_DAY_HOUR:
-                case INTERVAL_DAY_MINUTE:
-                case INTERVAL_DAY_SECOND:
-                case INTERVAL_HOUR:
-                case INTERVAL_HOUR_MINUTE:
-                case INTERVAL_HOUR_SECOND:
-                case INTERVAL_MINUTE:
-                case INTERVAL_MINUTE_SECOND:
-                case INTERVAL_SECOND:
-                  trop1 = Expressions.convert_(
-                      Expressions.divide(trop1,
-                          Expressions.constant(DateTimeUtils.MILLIS_PER_DAY)),
-                      int.class);
-              }
+      case DATE:
+        switch (typeName) {
+        case TIMESTAMP:
+          trop0 = Expressions.convert_(
+              Expressions.multiply(trop0,
+                  Expressions.constant(DateTimeUtils.MILLIS_PER_DAY)),
+              long.class);
+          break;
+        default:
+          switch (typeName1) {
+          case INTERVAL_DAY:
+          case INTERVAL_DAY_HOUR:
+          case INTERVAL_DAY_MINUTE:
+          case INTERVAL_DAY_SECOND:
+          case INTERVAL_HOUR:
+          case INTERVAL_HOUR_MINUTE:
+          case INTERVAL_HOUR_SECOND:
+          case INTERVAL_MINUTE:
+          case INTERVAL_MINUTE_SECOND:
+          case INTERVAL_SECOND:
+            trop1 = Expressions.convert_(
+                Expressions.divide(trop1,
+                    Expressions.constant(DateTimeUtils.MILLIS_PER_DAY)),
+                int.class);
           }
-          break;
-        case TIME:
-          trop1 = Expressions.convert_(trop1, int.class);
-          break;
+        }
+        break;
+      case TIME:
+        trop1 = Expressions.convert_(trop1, int.class);
+        break;
       }
       switch (typeName1) {
-        case INTERVAL_YEAR:
-        case INTERVAL_YEAR_MONTH:
-        case INTERVAL_MONTH:
-          switch (call.getKind()) {
-            case MINUS:
-              trop1 = Expressions.negate(trop1);
-          }
-          switch (typeName) {
-            case TIME:
-              return Expressions.convert_(trop0, long.class);
-            default:
-              final BuiltInMethod method =
-                  operand0.getType().getSqlTypeName() == SqlTypeName.TIMESTAMP
-                      ? BuiltInMethod.ADD_MONTHS
-                      : BuiltInMethod.ADD_MONTHS_INT;
-              return Expressions.call(method.method, trop0, trop1);
-          }
-
-        case INTERVAL_DAY:
-        case INTERVAL_DAY_HOUR:
-        case INTERVAL_DAY_MINUTE:
-        case INTERVAL_DAY_SECOND:
-        case INTERVAL_HOUR:
-        case INTERVAL_HOUR_MINUTE:
-        case INTERVAL_HOUR_SECOND:
-        case INTERVAL_MINUTE:
-        case INTERVAL_MINUTE_SECOND:
-        case INTERVAL_SECOND:
-          switch (call.getKind()) {
-            case MINUS:
-              return normalize(typeName, Expressions.subtract(trop0, trop1));
-            default:
-              return normalize(typeName, Expressions.add(trop0, trop1));
-          }
-
+      case INTERVAL_YEAR:
+      case INTERVAL_YEAR_MONTH:
+      case INTERVAL_MONTH:
+        switch (call.getKind()) {
+        case MINUS:
+          trop1 = Expressions.negate(trop1);
+        }
+        switch (typeName) {
+        case TIME:
+          return Expressions.convert_(trop0, long.class);
         default:
-          switch (call.getKind()) {
-            case MINUS:
-              switch (typeName) {
-                case INTERVAL_YEAR:
-                case INTERVAL_YEAR_MONTH:
-                case INTERVAL_MONTH:
-                  return Expressions.call(BuiltInMethod.SUBTRACT_MONTHS.method,
-                      trop0, trop1);
-              }
-              TimeUnit fromUnit =
-                  typeName1 == SqlTypeName.DATE ? TimeUnit.DAY : TimeUnit.MILLISECOND;
-              TimeUnit toUnit = TimeUnit.MILLISECOND;
-              return multiplyDivide(
-                  Expressions.convert_(Expressions.subtract(trop0, trop1),
-                      (Class) long.class),
-                  fromUnit.multiplier, toUnit.multiplier);
-            default:
-              throw new AssertionError(call);
+          final BuiltInMethod method =
+              operand0.getType().getSqlTypeName() == SqlTypeName.TIMESTAMP
+                  ? BuiltInMethod.ADD_MONTHS
+                  : BuiltInMethod.ADD_MONTHS_INT;
+          return Expressions.call(method.method, trop0, trop1);
+        }
+
+      case INTERVAL_DAY:
+      case INTERVAL_DAY_HOUR:
+      case INTERVAL_DAY_MINUTE:
+      case INTERVAL_DAY_SECOND:
+      case INTERVAL_HOUR:
+      case INTERVAL_HOUR_MINUTE:
+      case INTERVAL_HOUR_SECOND:
+      case INTERVAL_MINUTE:
+      case INTERVAL_MINUTE_SECOND:
+      case INTERVAL_SECOND:
+        switch (call.getKind()) {
+        case MINUS:
+          return normalize(typeName, Expressions.subtract(trop0, trop1));
+        default:
+          return normalize(typeName, Expressions.add(trop0, trop1));
+        }
+
+      default:
+        switch (call.getKind()) {
+        case MINUS:
+          switch (typeName) {
+          case INTERVAL_YEAR:
+          case INTERVAL_YEAR_MONTH:
+          case INTERVAL_MONTH:
+            return Expressions.call(BuiltInMethod.SUBTRACT_MONTHS.method,
+                trop0, trop1);
           }
+          TimeUnit fromUnit =
+              typeName1 == SqlTypeName.DATE ? TimeUnit.DAY : TimeUnit.MILLISECOND;
+          TimeUnit toUnit = TimeUnit.MILLISECOND;
+          return multiplyDivide(
+              Expressions.convert_(Expressions.subtract(trop0, trop1),
+                  (Class) long.class),
+              fromUnit.multiplier, toUnit.multiplier);
+        default:
+          throw new AssertionError(call);
+        }
       }
     }
 
     /** Normalizes a TIME value into 00:00:00..23:59:39. */
     private Expression normalize(SqlTypeName typeName, Expression e) {
       switch (typeName) {
-        case TIME:
-          return Expressions.call(BuiltInMethod.FLOOR_MOD.method, e,
-              Expressions.constant(DateTimeUtils.MILLIS_PER_DAY));
-        default:
-          return e;
+      case TIME:
+        return Expressions.call(BuiltInMethod.FLOOR_MOD.method, e,
+            Expressions.constant(DateTimeUtils.MILLIS_PER_DAY));
+      default:
+        return e;
       }
     }
+  }
+
+  /**
+   * define Implementors for SqlOperators , can be used to override the
+   * default definations
+   */
+  public interface RexImpTableDefine {
+    void define(Map<SqlOperator, CallImplementor> map,
+        Map<SqlAggFunction, Supplier<? extends AggImplementor>> aggMap,
+        Map<SqlAggFunction, Supplier<? extends WinAggImplementor>> winAggMap);
+  }
+
+  public void defineImplementors(RexImpTableDefine rexImpTableDefine) {
+    rexImpTableDefine.define(map, aggMap, winAggMap);
   }
 }
 

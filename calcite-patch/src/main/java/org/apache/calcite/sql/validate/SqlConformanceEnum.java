@@ -69,81 +69,90 @@ public enum SqlConformanceEnum implements SqlConformance {
 
   /** Conformance value that instructs Calcite to use SQL semantics
    * consistent with Microsoft SQL Server version 2008. */
-  SQL_SERVER_2008;
+  SQL_SERVER_2008,
+
+  /** Conformance value that instructs Calcite to use SQL semantics strictly
+   * consistent with hive ql*/
+  HIVE;
 
   public boolean isLiberal() {
     switch (this) {
-      case BABEL:
-        return true;
-      default:
-        return false;
+    case BABEL:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean isGroupByAlias() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case MYSQL_5:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case MYSQL_5:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean isGroupByOrdinal() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case MYSQL_5:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case MYSQL_5:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean isHavingAlias() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case MYSQL_5:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case MYSQL_5:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean isSortByOrdinal() {
     switch (this) {
-      case DEFAULT:
-      case BABEL:
-      case LENIENT:
-      case MYSQL_5:
-      case ORACLE_10:
-      case ORACLE_12:
-      case STRICT_92:
-      case PRAGMATIC_99:
-      case PRAGMATIC_2003:
-      case SQL_SERVER_2008:
-        return true;
-      default:
-        return false;
+    case DEFAULT:
+    case BABEL:
+    case LENIENT:
+    case MYSQL_5:
+    case ORACLE_10:
+    case ORACLE_12:
+    case STRICT_92:
+    case PRAGMATIC_99:
+    case PRAGMATIC_2003:
+    case SQL_SERVER_2008:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean isSortByAlias() {
     switch (this) {
-      case DEFAULT:
-      case BABEL:
-      case LENIENT:
-      case MYSQL_5:
-      case ORACLE_10:
-      case ORACLE_12:
-      case STRICT_92:
-      case SQL_SERVER_2008:
-        return true;
-      default:
-        return false;
+    case DEFAULT:
+    case BABEL:
+    case LENIENT:
+    case MYSQL_5:
+    case ORACLE_10:
+    case ORACLE_12:
+    case STRICT_92:
+    case SQL_SERVER_2008:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
@@ -153,157 +162,175 @@ public enum SqlConformanceEnum implements SqlConformance {
 
   public boolean isFromRequired() {
     switch (this) {
-      case ORACLE_10:
-      case ORACLE_12:
-      case STRICT_92:
-      case STRICT_99:
-      case STRICT_2003:
-        return true;
-      default:
-        return false;
+    case ORACLE_10:
+    case ORACLE_12:
+    case STRICT_92:
+    case STRICT_99:
+    case STRICT_2003:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean isBangEqualAllowed() {
     switch (this) {
-      case LENIENT:
-      case BABEL:
-      case MYSQL_5:
-      case ORACLE_10:
-      case ORACLE_12:
-        return true;
-      default:
-        return false;
+    case LENIENT:
+    case BABEL:
+    case MYSQL_5:
+    case ORACLE_10:
+    case ORACLE_12:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   @Override public boolean isMinusAllowed() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case ORACLE_10:
-      case ORACLE_12:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case ORACLE_10:
+    case ORACLE_12:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   @Override public boolean isPercentRemainderAllowed() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case MYSQL_5:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case MYSQL_5:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean isApplyAllowed() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case SQL_SERVER_2008:
-      case ORACLE_12:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case SQL_SERVER_2008:
+    case ORACLE_12:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean isInsertSubsetColumnsAllowed() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case PRAGMATIC_99:
-      case PRAGMATIC_2003:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case PRAGMATIC_99:
+    case PRAGMATIC_2003:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean allowNiladicParentheses() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case MYSQL_5:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case MYSQL_5:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean allowExplicitRowValueConstructor() {
     switch (this) {
-      case DEFAULT:
-      case LENIENT:
-        return true;
-      default:
-        return false;
+    case DEFAULT:
+    case LENIENT:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean allowExtend() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean isLimitStartCountAllowed() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case MYSQL_5:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case MYSQL_5:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean allowGeometry() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case MYSQL_5:
-      case SQL_SERVER_2008:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case MYSQL_5:
+    case SQL_SERVER_2008:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean shouldConvertRaggedUnionTypesToVarying() {
     switch (this) {
-      case PRAGMATIC_99:
-      case PRAGMATIC_2003:
-      case MYSQL_5:
-      case ORACLE_10:
-      case ORACLE_12:
-      case SQL_SERVER_2008:
-        return true;
-      default:
-        return false;
+    case PRAGMATIC_99:
+    case PRAGMATIC_2003:
+    case MYSQL_5:
+    case ORACLE_10:
+    case ORACLE_12:
+    case SQL_SERVER_2008:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
   public boolean allowExtendedTrim() {
     switch (this) {
-      case BABEL:
-      case LENIENT:
-      case MYSQL_5:
-      case SQL_SERVER_2008:
-        return true;
-      default:
-        return false;
+    case BABEL:
+    case LENIENT:
+    case MYSQL_5:
+    case SQL_SERVER_2008:
+    case HIVE:
+      return true;
+    default:
+      return false;
     }
   }
 
+  public boolean allowUnSafeTypeCast() {
+    switch (this) {
+    case HIVE:
+      return true;
+    default:
+      return false;
+    }
+  }
 }
 
 // End SqlConformanceEnum.java

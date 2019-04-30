@@ -88,8 +88,8 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
   }
 
   @Override public EnumerableAggregate copy(RelTraitSet traitSet, RelNode input,
-                                            boolean indicator, ImmutableBitSet groupSet,
-                                            List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
+      boolean indicator, ImmutableBitSet groupSet,
+      List<ImmutableBitSet> groupSets, List<AggregateCall> aggCalls) {
     try {
       return new EnumerableAggregate(getCluster(), traitSet, input, indicator,
           groupSet, groupSets, aggCalls);
@@ -282,7 +282,7 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
               return agg.call.filterArg < 0
                   ? null
                   : RexInputRef.of(agg.call.filterArg,
-                  inputPhysType.getRowType());
+                      inputPhysType.getRowType());
             }
 
             public RexToLixTranslator rowTranslator() {
@@ -449,7 +449,7 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
   }
 
   private void declareParentAccumulator(List<Expression> initExpressions,
-                                        BlockBuilder initBlock, PhysType accPhysType) {
+      BlockBuilder initBlock, PhysType accPhysType) {
     if (accPhysType.getJavaRowType()
         instanceof JavaTypeFactoryImpl.SyntheticRecordType) {
       // We have to initialize the SyntheticRecordType instance this way, to
@@ -495,11 +495,11 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
    * </ul>
    */
   private void implementLambdaFactory(BlockBuilder builder,
-                                      PhysType inputPhysType,
-                                      List<AggImpState> aggs,
-                                      Expression accumulatorInitializer,
-                                      boolean hasOrderedCall,
-                                      ParameterExpression lambdaFactory) {
+      PhysType inputPhysType,
+      List<AggImpState> aggs,
+      Expression accumulatorInitializer,
+      boolean hasOrderedCall,
+      ParameterExpression lambdaFactory) {
     if (hasOrderedCall) {
       ParameterExpression pe = Expressions.parameter(List.class,
           builder.newName("sourceSorters"));
@@ -554,6 +554,10 @@ public class EnumerableAggregate extends Aggregate implements EnumerableRel {
     AggContextImpl(AggImpState agg, JavaTypeFactory typeFactory) {
       this.agg = agg;
       this.typeFactory = typeFactory;
+    }
+
+    @Override public AggregateCall call() {
+      return agg.call;
     }
 
     public SqlAggFunction aggregation() {

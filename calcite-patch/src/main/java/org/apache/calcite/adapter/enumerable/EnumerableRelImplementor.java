@@ -79,7 +79,7 @@ public class EnumerableRelImplementor extends JavaRelImplementor {
       this::getCorrelVariableGetter;
 
   public EnumerableRelImplementor(RexBuilder rexBuilder,
-                                  Map<String, Object> internalParameters) {
+      Map<String, Object> internalParameters) {
     super(rexBuilder);
     this.map = internalParameters;
   }
@@ -95,35 +95,45 @@ public class EnumerableRelImplementor extends JavaRelImplementor {
     return child.implement(this, prefer);
   }
 
+  protected Collection<Statement> buildInitialStatements() {
+    return new ArrayList<>();
+  }
+
+  protected void addMemberDeclaration(List<MemberDeclaration> memberDeclarations){
+
+  }
+
   public ClassDeclaration implementRoot(EnumerableRel rootRel,
-                                        EnumerableRel.Prefer prefer) {
+      EnumerableRel.Prefer prefer) {
     EnumerableRel.Result result = rootRel.implement(this, prefer);
     switch (prefer) {
-      case ARRAY:
-        if (result.physType.getFormat() == JavaRowFormat.ARRAY
-            && rootRel.getRowType().getFieldCount() == 1) {
-          BlockBuilder bb = new BlockBuilder();
-          Expression e = null;
-          for (Statement statement : result.block.statements) {
-            if (statement instanceof GotoStatement) {
-              e = bb.append("v", ((GotoStatement) statement).expression);
-            } else {
-              bb.add(statement);
-            }
+    case ARRAY:
+      if (result.physType.getFormat() == JavaRowFormat.ARRAY
+          && rootRel.getRowType().getFieldCount() == 1) {
+        BlockBuilder bb = new BlockBuilder();
+        Expression e = null;
+        for (Statement statement : result.block.statements) {
+          if (statement instanceof GotoStatement) {
+            e = bb.append("v", ((GotoStatement) statement).expression);
+          } else {
+            bb.add(statement);
           }
-          if (e != null) {
-            bb.add(
-                Expressions.return_(null,
-                    Expressions.call(null, BuiltInMethod.SLICE0.method, e)));
-          }
-          result = new EnumerableRel.Result(bb.toBlock(), result.physType,
-              JavaRowFormat.SCALAR);
         }
+        if (e != null) {
+          bb.add(
+              Expressions.return_(null,
+                  Expressions.call(null, BuiltInMethod.SLICE0.method, e)));
+        }
+        result = new EnumerableRel.Result(bb.toBlock(), result.physType,
+            JavaRowFormat.SCALAR);
+      }
     }
 
     final List<MemberDeclaration> memberDeclarations = new ArrayList<>();
+    addMemberDeclaration(memberDeclarations);
     new TypeRegistrar(memberDeclarations).go(result);
 
+    Collection<Statement> initialStatements = buildInitialStatements();
     // This creates the following code
     // final Integer v1stashed = (Integer) root.get("v1stashed")
     // It is convenient for passing non-literal "compile-time" constants
@@ -138,6 +148,7 @@ public class EnumerableRelImplementor extends JavaRelImplementor {
 
     final BlockStatement block = Expressions.block(
         Iterables.concat(
+            initialStatements,
             stashed,
             result.block.statements));
     memberDeclarations.add(
@@ -235,8 +246,8 @@ public class EnumerableRelImplementor extends JavaRelImplementor {
               Expressions.field(thisParameter, field.getName()),
               Expressions.field(thatParameter, field.getName()))
               : Expressions.call(BuiltInMethod.OBJECTS_EQUAL.method,
-              Expressions.field(thisParameter, field.getName()),
-              Expressions.field(thatParameter, field.getName())));
+                  Expressions.field(thisParameter, field.getName()),
+                  Expressions.field(thatParameter, field.getName())));
     }
     blockBuilder2.add(
         Expressions.return_(null, Expressions.foldAnd(conditions)));
@@ -369,8 +380,8 @@ public class EnumerableRelImplementor extends JavaRelImplementor {
         expression5 == null
             ? Expressions.constant("{}")
             : Expressions.add(
-            expression5,
-            Expressions.constant("}"));
+                expression5,
+                Expressions.constant("}"));
     blockBuilder5.add(
         Expressions.return_(
             null,
@@ -432,8 +443,8 @@ public class EnumerableRelImplementor extends JavaRelImplementor {
   }
 
   public void registerCorrelVariable(final String name,
-                                     final ParameterExpression pe,
-                                     final BlockBuilder corrBlock, final PhysType physType) {
+      final ParameterExpression pe,
+      final BlockBuilder corrBlock, final PhysType physType) {
     corrVars.put(name, (list, index, storageType) -> {
       Expression fieldReference =
           physType.fieldReference(pe, index, storageType);

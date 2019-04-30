@@ -58,11 +58,29 @@ public class SqlBinaryOperator extends SqlOperator {
       SqlReturnTypeInference returnTypeInference,
       SqlOperandTypeInference operandTypeInference,
       SqlOperandTypeChecker operandTypeChecker) {
-    super(
+    this(
         name,
         kind,
         leftPrec(prec, leftAssoc),
         rightPrec(prec, leftAssoc),
+        returnTypeInference,
+        operandTypeInference,
+        operandTypeChecker);
+  }
+
+  public SqlBinaryOperator(
+      String name,
+      SqlKind kind,
+      int leftPrecedence,
+      int rightPrecedence,
+      SqlReturnTypeInference returnTypeInference,
+      SqlOperandTypeInference operandTypeInference,
+      SqlOperandTypeChecker operandTypeChecker) {
+    super(
+        name,
+        kind,
+        leftPrecedence,
+        rightPrecedence,
         returnTypeInference,
         operandTypeInference,
         operandTypeChecker);
@@ -188,18 +206,18 @@ public class SqlBinaryOperator extends SqlOperator {
       if (mono1 == SqlMonotonicity.CONSTANT) {
         if (call.isOperandLiteral(1, false)) {
           switch (call.getOperandLiteralValue(1, BigDecimal.class).signum()) {
-            case -1:
+          case -1:
 
-              // mono / -ve constant --> reverse mono, unstrict
-              return mono0.reverse().unstrict();
-            case 0:
+            // mono / -ve constant --> reverse mono, unstrict
+            return mono0.reverse().unstrict();
+          case 0:
 
-              // mono / zero --> constant (infinity!)
-              return SqlMonotonicity.CONSTANT;
-            default:
+            // mono / zero --> constant (infinity!)
+            return SqlMonotonicity.CONSTANT;
+          default:
 
-              // mono / +ve constant * mono1 --> mono, unstrict
-              return mono0.unstrict();
+            // mono / +ve constant * mono1 --> mono, unstrict
+            return mono0.unstrict();
           }
         }
       }

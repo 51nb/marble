@@ -39,11 +39,29 @@ public class SqlPrefixOperator extends SqlOperator {
       SqlReturnTypeInference returnTypeInference,
       SqlOperandTypeInference operandTypeInference,
       SqlOperandTypeChecker operandTypeChecker) {
-    super(
+    this(
         name,
         kind,
         leftPrec(prec, true),
         rightPrec(prec, true),
+        returnTypeInference,
+        operandTypeInference,
+        operandTypeChecker);
+  }
+
+  public SqlPrefixOperator(
+      String name,
+      SqlKind kind,
+      int leftPrecedence,
+      int rightPrecedence,
+      SqlReturnTypeInference returnTypeInference,
+      SqlOperandTypeInference operandTypeInference,
+      SqlOperandTypeChecker operandTypeChecker) {
+    super(
+        name,
+        kind,
+        leftPrecedence,
+        rightPrecedence,
         returnTypeInference,
         operandTypeInference,
         operandTypeChecker);

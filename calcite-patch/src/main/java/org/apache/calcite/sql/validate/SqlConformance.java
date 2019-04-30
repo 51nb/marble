@@ -393,6 +393,22 @@ public interface SqlConformance {
    * false otherwise.
    */
   boolean allowExtendedTrim();
+
+  /**
+   * Whether CAST can support unsafe type converting.
+   *
+   * <p>For example, consider the query
+   *
+   * <blockquote><pre>SELECT CAST('' AS DOUBLE)</pre></blockquote>
+   * <p>Under strict behavior ,CAST throws an exception, and the query fails.
+   * If allowUnSafeTypeCast is true, CAST will return null when exception occurs.
+   * <p>Among the built-in conformance levels, true in
+   * {@link SqlConformanceEnum#HIVE},
+   * false otherwise.
+   */
+  default boolean allowUnSafeTypeCast() {
+    return false;
+  }
 }
 
 // End SqlConformance.java

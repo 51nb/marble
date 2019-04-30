@@ -118,7 +118,7 @@ public class PhysTypeImpl implements PhysType {
   }
 
   public PhysType project(List<Integer> integers, boolean indicator,
-                          JavaRowFormat format) {
+      JavaRowFormat format) {
     final RelDataTypeFactory.Builder builder = typeFactory.builder();
     for (int index : integers) {
       builder.add(rowType.getFieldList().get(index));
@@ -148,27 +148,27 @@ public class PhysTypeImpl implements PhysType {
       JavaRowFormat targetFormat) {
     // Optimize target format
     switch (fields.size()) {
-      case 0:
-        targetFormat = JavaRowFormat.LIST;
-        break;
-      case 1:
-        targetFormat = JavaRowFormat.SCALAR;
-        break;
+    case 0:
+      targetFormat = JavaRowFormat.LIST;
+      break;
+    case 1:
+      targetFormat = JavaRowFormat.SCALAR;
+      break;
     }
     final PhysType targetPhysType =
         project(fields, targetFormat);
     switch (format) {
-      case SCALAR:
-        return Expressions.call(BuiltInMethod.IDENTITY_SELECTOR.method);
-      default:
-        return Expressions.lambda(Function1.class,
-            targetPhysType.record(fieldReferences(parameter, fields)), parameter);
+    case SCALAR:
+      return Expressions.call(BuiltInMethod.IDENTITY_SELECTOR.method);
+    default:
+      return Expressions.lambda(Function1.class,
+          targetPhysType.record(fieldReferences(parameter, fields)), parameter);
     }
   }
 
   public Expression generateSelector(final ParameterExpression parameter,
-                                     final List<Integer> fields, List<Integer> usedFields,
-                                     JavaRowFormat targetFormat) {
+      final List<Integer> fields, List<Integer> usedFields,
+      JavaRowFormat targetFormat) {
     final PhysType targetPhysType =
         project(fields, true, targetFormat);
     final List<Expression> expressions = new ArrayList<>();
@@ -197,21 +197,21 @@ public class PhysTypeImpl implements PhysType {
       JavaRowFormat targetFormat) {
     // Optimize target format
     switch (fields.size()) {
-      case 0:
-        targetFormat = JavaRowFormat.LIST;
-        break;
-      case 1:
-        targetFormat = JavaRowFormat.SCALAR;
-        break;
+    case 0:
+      targetFormat = JavaRowFormat.LIST;
+      break;
+    case 1:
+      targetFormat = JavaRowFormat.SCALAR;
+      break;
     }
     final PhysType targetPhysType =
         project(fields, targetFormat);
     switch (format) {
-      case SCALAR:
-        return Pair.of(parameter.getType(), ImmutableList.of(parameter));
-      default:
-        return Pair.of(targetPhysType.getJavaRowType(),
-            fieldReferences(parameter, fields));
+    case SCALAR:
+      return Pair.of(parameter.getType(), ImmutableList.of(parameter));
+    default:
+      return Pair.of(targetPhysType.getJavaRowType(),
+          fieldReferences(parameter, fields));
     }
   }
 
@@ -291,9 +291,9 @@ public class PhysTypeImpl implements PhysType {
       Expression arg0 = fieldReference(parameterV0, index);
       Expression arg1 = fieldReference(parameterV1, index);
       switch (Primitive.flavor(fieldClass(index))) {
-        case OBJECT:
-          arg0 = Types.castIfNecessary(Comparable.class, arg0);
-          arg1 = Types.castIfNecessary(Comparable.class, arg1);
+      case OBJECT:
+        arg0 = Types.castIfNecessary(Comparable.class, arg0);
+        arg1 = Types.castIfNecessary(Comparable.class, arg1);
       }
       final boolean nullsFirst =
           collation.nullDirection
@@ -390,9 +390,9 @@ public class PhysTypeImpl implements PhysType {
       Expression arg0 = fieldReference(parameterV0, index);
       Expression arg1 = fieldReference(parameterV1, index);
       switch (Primitive.flavor(fieldClass(index))) {
-        case OBJECT:
-          arg0 = Types.castIfNecessary(Comparable.class, arg0);
-          arg1 = Types.castIfNecessary(Comparable.class, arg1);
+      case OBJECT:
+        arg0 = Types.castIfNecessary(Comparable.class, arg0);
+        arg1 = Types.castIfNecessary(Comparable.class, arg1);
       }
       final boolean nullsFirst =
           fieldCollation.nullDirection
@@ -528,104 +528,128 @@ public class PhysTypeImpl implements PhysType {
     return rowType.getFieldList().get(field).getType().isNullable();
   }
 
+  public static String convert2String(Object o) {
+    return o == null ? null : o.toString();
+  }
+
+  private static final Method CONVERT2STRING_METHOD = Types.lookupMethod(
+      PhysTypeImpl.class, "convert2String", Object.class);
+
   public Expression generateAccessor(
-      List<Integer> fields) {
+      List<Integer> fields, List<Class> targetFieldClassList) {
     ParameterExpression v1 =
         Expressions.parameter(javaRowClass, "v1");
     switch (fields.size()) {
-      case 0:
-        return Expressions.lambda(
-            Function1.class,
-            Expressions.field(
-                null,
-                BuiltInMethod.COMPARABLE_EMPTY_LIST.field),
-            v1);
-      case 1:
-        int field0 = fields.get(0);
+    case 0:
+      return Expressions.lambda(
+          Function1.class,
+          Expressions.field(
+              null,
+              BuiltInMethod.COMPARABLE_EMPTY_LIST.field),
+          v1);
+    case 1:
+      int field0 = fields.get(0);
 
-        // new Function1<Employee, Res> {
-        //    public Res apply(Employee v1) {
-        //        return v1.<fieldN>;
-        //    }
-        // }
-        Class returnType = fieldClasses.get(field0);
-        Expression fieldReference =
+      // new Function1<Employee, Res> {
+      //    public Res apply(Employee v1) {
+      //        return v1.<fieldN>;
+      //    }
+      // }
+      Class returnType = targetFieldClassList.get(0);
+      Class storageType = fieldClass(field0);
+      Expression fieldReference;
+      if (returnType != storageType) {
+        fieldReference = RexToLixTranslator.convert(fieldReference(v1, field0),
+            returnType);
+      } else {
+        fieldReference =
             Types.castIfNecessary(
                 returnType,
                 fieldReference(v1, field0));
+      }
+      return Expressions.lambda(
+          Function1.class,
+          fieldReference,
+          v1);
+    default:
+      // new Function1<Employee, List> {
+      //    public List apply(Employee v1) {
+      //        return Arrays.asList(
+      //            new Object[] {v1.<fieldN>, v1.<fieldM>});
+      //    }
+      // }
+      Expressions.FluentList<Expression> list = Expressions.list();
+      int i = 0;
+      for (int field : fields) {
+        returnType = targetFieldClassList.get(i);
+        storageType = fieldClass(field);
+        if (returnType != storageType) {
+          fieldReference = RexToLixTranslator.convert(fieldReference(v1, field),
+              returnType);
+        } else {
+          fieldReference = fieldReference(v1, field);
+        }
+        list.add(fieldReference);
+        i++;
+      }
+      switch (list.size()) {
+      case 2:
         return Expressions.lambda(
             Function1.class,
-            fieldReference,
+            Expressions.call(
+                List.class,
+                null,
+                BuiltInMethod.LIST2.method,
+                list),
+            v1);
+      case 3:
+        return Expressions.lambda(
+            Function1.class,
+            Expressions.call(
+                List.class,
+                null,
+                BuiltInMethod.LIST3.method,
+                list),
+            v1);
+      case 4:
+        return Expressions.lambda(
+            Function1.class,
+            Expressions.call(
+                List.class,
+                null,
+                BuiltInMethod.LIST4.method,
+                list),
+            v1);
+      case 5:
+        return Expressions.lambda(
+            Function1.class,
+            Expressions.call(
+                List.class,
+                null,
+                BuiltInMethod.LIST5.method,
+                list),
+            v1);
+      case 6:
+        return Expressions.lambda(
+            Function1.class,
+            Expressions.call(
+                List.class,
+                null,
+                BuiltInMethod.LIST6.method,
+                list),
             v1);
       default:
-        // new Function1<Employee, List> {
-        //    public List apply(Employee v1) {
-        //        return Arrays.asList(
-        //            new Object[] {v1.<fieldN>, v1.<fieldM>});
-        //    }
-        // }
-        Expressions.FluentList<Expression> list = Expressions.list();
-        for (int field : fields) {
-          list.add(fieldReference(v1, field));
-        }
-        switch (list.size()) {
-          case 2:
-            return Expressions.lambda(
-                Function1.class,
-                Expressions.call(
-                    List.class,
-                    null,
-                    BuiltInMethod.LIST2.method,
-                    list),
-                v1);
-          case 3:
-            return Expressions.lambda(
-                Function1.class,
-                Expressions.call(
-                    List.class,
-                    null,
-                    BuiltInMethod.LIST3.method,
-                    list),
-                v1);
-          case 4:
-            return Expressions.lambda(
-                Function1.class,
-                Expressions.call(
-                    List.class,
-                    null,
-                    BuiltInMethod.LIST4.method,
-                    list),
-                v1);
-          case 5:
-            return Expressions.lambda(
-                Function1.class,
-                Expressions.call(
-                    List.class,
-                    null,
-                    BuiltInMethod.LIST5.method,
-                    list),
-                v1);
-          case 6:
-            return Expressions.lambda(
-                Function1.class,
-                Expressions.call(
-                    List.class,
-                    null,
-                    BuiltInMethod.LIST6.method,
-                    list),
-                v1);
-          default:
-            return Expressions.lambda(
-                Function1.class,
-                Expressions.call(
-                    List.class,
-                    null,
-                    BuiltInMethod.LIST_N.method,
-                    Expressions.newArrayInit(
-                        Comparable.class,
-                        list)),
-                v1);
-        }
+        return Expressions.lambda(
+            Function1.class,
+            Expressions.call(
+                List.class,
+                null,
+                BuiltInMethod.LIST_N.method,
+                Expressions.newArrayInit(
+                    Comparable.class,
+                    list)),
+            v1);
+      }
     }
   }
 

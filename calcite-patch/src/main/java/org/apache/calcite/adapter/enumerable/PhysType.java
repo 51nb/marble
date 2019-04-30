@@ -92,7 +92,7 @@ public interface PhysType {
    * @return Expression to access the field of the expression
    */
   Expression fieldReference(Expression expression, int field,
-                            Type storageType);
+      Type storageType);
 
   /** Generates an accessor function for a given list of fields.  The resulting
    * object is a {@link List} (implementing {@link Object#hashCode()} and
@@ -109,7 +109,8 @@ public interface PhysType {
    * }
    * }</pre></blockquote>
    */
-  Expression generateAccessor(List<Integer> fields);
+  Expression generateAccessor(List<Integer> fields,
+      List<Class> targetFieldClassList);
 
   /** Generates a selector for the given fields from an expression, with the
    * default row format. */

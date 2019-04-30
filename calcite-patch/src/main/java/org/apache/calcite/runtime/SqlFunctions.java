@@ -258,12 +258,12 @@ public class SqlFunctions {
 
   /** SQL {@code TRIM(... seek FROM s)} function. */
   public static String trim(boolean left, boolean right, String seek,
-                            String s) {
+      String s) {
     return trim(left, right, seek, s, true);
   }
 
   public static String trim(boolean left, boolean right, String seek,
-                            String s, boolean strict) {
+      String s, boolean strict) {
     if (strict && seek.length() != 1) {
       throw RESOURCE.trimError().ex();
     }
@@ -365,7 +365,7 @@ public class SqlFunctions {
 
   /** SQL {@code OVERLAY} function applied to binary strings. */
   public static ByteString overlay(ByteString s, ByteString r, int start,
-                                   int length) {
+      int length) {
     if (s == null || r == null) {
       return null;
     }
@@ -841,13 +841,13 @@ public class SqlFunctions {
   }
 
   private static RuntimeException notArithmetic(String op, Object b0,
-                                                Object b1) {
+      Object b1) {
     return RESOURCE.invalidTypesForArithmetic(b0.getClass().toString(),
         op, b1.getClass().toString()).ex();
   }
 
   private static RuntimeException notComparable(String op, Object b0,
-                                                Object b1) {
+      Object b1) {
     return RESOURCE.invalidTypesForComparison(b0.getClass().toString(),
         op, b1.getClass().toString()).ex();
   }
@@ -1476,8 +1476,8 @@ public class SqlFunctions {
   public static boolean toBoolean(Object o) {
     return o instanceof Boolean ? (Boolean) o
         : o instanceof Number ? toBoolean((Number) o)
-        : o instanceof String ? toBoolean((String) o)
-        : (Boolean) cannotConvert(o, boolean.class);
+            : o instanceof String ? toBoolean((String) o)
+                : (Boolean) cannotConvert(o, boolean.class);
   }
 
   // Don't need parseByte etc. - Byte.parseByte is sufficient.
@@ -1485,7 +1485,7 @@ public class SqlFunctions {
   public static byte toByte(Object o) {
     return o instanceof Byte ? (Byte) o
         : o instanceof Number ? toByte((Number) o)
-        : Byte.parseByte(o.toString());
+            : Byte.parseByte(o.toString());
   }
 
   public static byte toByte(Number number) {
@@ -1511,8 +1511,8 @@ public class SqlFunctions {
   public static short toShort(Object o) {
     return o instanceof Short ? (Short) o
         : o instanceof Number ? toShort((Number) o)
-        : o instanceof String ? toShort((String) o)
-        : (Short) cannotConvert(o, short.class);
+            : o instanceof String ? toShort((String) o)
+                : (Short) cannotConvert(o, short.class);
   }
 
   /** Converts the Java type used for UDF parameters of SQL DATE type
@@ -1564,9 +1564,9 @@ public class SqlFunctions {
   public static int toInt(Object o) {
     return o instanceof Integer ? (Integer) o
         : o instanceof Number ? toInt((Number) o)
-        : o instanceof String ? toInt((String) o)
-        : o instanceof java.util.Date ? toInt((java.util.Date) o)
-        : (Integer) cannotConvert(o, int.class);
+            : o instanceof String ? toInt((String) o)
+                : o instanceof java.util.Date ? toInt((java.util.Date) o)
+                    : (Integer) cannotConvert(o, int.class);
   }
 
   /** Converts the Java type used for UDF parameters of SQL TIMESTAMP type
@@ -1609,8 +1609,8 @@ public class SqlFunctions {
   public static long toLong(Object o) {
     return o instanceof Long ? (Long) o
         : o instanceof Number ? toLong((Number) o)
-        : o instanceof String ? toLong((String) o)
-        : (Long) cannotConvert(o, long.class);
+            : o instanceof String ? toLong((String) o)
+                : (Long) cannotConvert(o, long.class);
   }
 
   public static float toFloat(String s) {
@@ -1624,8 +1624,8 @@ public class SqlFunctions {
   public static float toFloat(Object o) {
     return o instanceof Float ? (Float) o
         : o instanceof Number ? toFloat((Number) o)
-        : o instanceof String ? toFloat((String) o)
-        : (Float) cannotConvert(o, float.class);
+            : o instanceof String ? toFloat((String) o)
+                : (Float) cannotConvert(o, float.class);
   }
 
   public static double toDouble(String s) {
@@ -1639,8 +1639,8 @@ public class SqlFunctions {
   public static double toDouble(Object o) {
     return o instanceof Double ? (Double) o
         : o instanceof Number ? toDouble((Number) o)
-        : o instanceof String ? toDouble((String) o)
-        : (Double) cannotConvert(o, double.class);
+            : o instanceof String ? toDouble((String) o)
+                : (Double) cannotConvert(o, double.class);
   }
 
   public static BigDecimal toBigDecimal(String s) {
@@ -1652,13 +1652,60 @@ public class SqlFunctions {
     // Not so "int". If it isn't a long, go straight to double.
     return number instanceof BigDecimal ? (BigDecimal) number
         : number instanceof BigInteger ? new BigDecimal((BigInteger) number)
-        : number instanceof Long ? new BigDecimal(number.longValue())
-        : new BigDecimal(number.doubleValue());
+            : number instanceof Long ? new BigDecimal(number.longValue())
+                : new BigDecimal(number.doubleValue());
   }
 
   public static BigDecimal toBigDecimal(Object o) {
     return o instanceof Number ? toBigDecimal((Number) o)
         : toBigDecimal(o.toString());
+  }
+
+  public static Double unsafeStringToDouble(String s) {
+    try {
+      return Double.valueOf(s.trim());
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  public static Short unsafeStringToShort(String s) {
+    try {
+      return Short.valueOf(s.trim());
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  public static Float unsafeStringToFloat(String s) {
+    try {
+      return Float.valueOf(s.trim());
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  public static BigDecimal unsafeStringToBigDecimal(String s) {
+    try {
+      return new BigDecimal(s.trim());
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  public static Integer unsafeStringToInteger(String s) {
+    try {
+      return Integer.valueOf(s.trim());
+    } catch (Exception e) {
+      return null;
+    }
+  }
+  public static Long unsafeStringToLong(String s) {
+    try {
+      return Long.valueOf(s.trim());
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   /** Converts the internal representation of a SQL DATE (int) to the Java
@@ -1971,6 +2018,17 @@ public class SqlFunctions {
     return list.get(item - 1);
   }
 
+  public static Object arrayItemIndexFromZeroOptional(List list, int item) {
+    if (list == null) {
+      return null;
+    }
+    if (item < 0 || item > list.size()) {
+      return null;
+    }
+    return list.get(item);
+  }
+
+
   /** Helper for "map element reference". Caller has already ensured that
    * array and index are not null. Index is 1-based, per SQL. */
   public static Object mapItem(Map map, Object item) {
@@ -2082,12 +2140,12 @@ public class SqlFunctions {
   /** Support the ELEMENT function. */
   public static Object element(List list) {
     switch (list.size()) {
-      case 0:
-        return null;
-      case 1:
-        return list.get(0);
-      default:
-        throw RESOURCE.moreThanOneValueInList(list.toString()).ex();
+    case 0:
+      return null;
+    case 1:
+      return list.get(0);
+    default:
+      throw RESOURCE.moreThanOneValueInList(list.toString()).ex();
     }
   }
 
@@ -2098,7 +2156,7 @@ public class SqlFunctions {
 
   /** Support the MULTISET INTERSECT DISTINCT function. */
   public static <E> Collection<E> multisetIntersectDistinct(Collection<E> c1,
-                                                            Collection<E> c2) {
+      Collection<E> c2) {
     final Set<E> result = new HashSet<>(c1);
     result.retainAll(c2);
     return new ArrayList<>(result);
@@ -2106,7 +2164,7 @@ public class SqlFunctions {
 
   /** Support the MULTISET INTERSECT ALL function. */
   public static <E> Collection<E> multisetIntersectAll(Collection<E> c1,
-                                                       Collection<E> c2) {
+      Collection<E> c2) {
     final List<E> result = new ArrayList<>(c1.size());
     final List<E> c2Copy = new ArrayList<>(c2);
     for (E e : c1) {
@@ -2119,7 +2177,7 @@ public class SqlFunctions {
 
   /** Support the MULTISET EXCEPT ALL function. */
   public static <E> Collection<E> multisetExceptAll(Collection<E> c1,
-                                                    Collection<E> c2) {
+      Collection<E> c2) {
     final List<E> result = new LinkedList<>(c1);
     for (E e : c2) {
       result.remove(e);
@@ -2129,7 +2187,7 @@ public class SqlFunctions {
 
   /** Support the MULTISET EXCEPT DISTINCT function. */
   public static <E> Collection<E> multisetExceptDistinct(Collection<E> c1,
-                                                         Collection<E> c2) {
+      Collection<E> c2) {
     final Set<E> result = new HashSet<>(c1);
     result.removeAll(c2);
     return new ArrayList<>(result);
@@ -2153,7 +2211,7 @@ public class SqlFunctions {
 
   /** Support the SUBMULTISET OF function. */
   public static boolean submultisetOf(Collection possibleSubMultiset,
-                                      Collection multiset) {
+      Collection multiset) {
     if (possibleSubMultiset.size() > multiset.size()) {
       return false;
     }
@@ -2168,7 +2226,7 @@ public class SqlFunctions {
 
   /** Support the MULTISET UNION function. */
   public static Collection multisetUnionDistinct(Collection collection1,
-                                                 Collection collection2) {
+      Collection collection2) {
     // capacity calculation is in the same way like for new HashSet(Collection)
     Set resultCollection =
         new HashSet(Math.max((int) ((collection1.size() + collection2.size()) / .75f) + 1, 16));
@@ -2179,7 +2237,7 @@ public class SqlFunctions {
 
   /** Support the MULTISET UNION ALL function. */
   public static Collection multisetUnionAll(Collection collection1,
-                                            Collection collection2) {
+      Collection collection2) {
     List resultCollection = new ArrayList(collection1.size() + collection2.size());
     resultCollection.addAll(collection1);
     resultCollection.addAll(collection2);
@@ -2212,30 +2270,30 @@ public class SqlFunctions {
       FlatProductInputType inputType = inputTypes[i];
       Object inputObject = lists[i];
       switch (inputType) {
-        case SCALAR:
-          @SuppressWarnings("unchecked") List<Comparable> list =
-              (List<Comparable>) inputObject;
-          enumerators.add(
-              Linq4j.transform(
-                  Linq4j.enumerator(list), FlatLists::of));
-          break;
-        case LIST:
-          @SuppressWarnings("unchecked") List<List<Comparable>> listList =
-              (List<List<Comparable>>) inputObject;
-          enumerators.add(Linq4j.enumerator(listList));
-          break;
-        case MAP:
-          @SuppressWarnings("unchecked") Map<Comparable, Comparable> map =
-              (Map<Comparable, Comparable>) inputObject;
-          Enumerator<Entry<Comparable, Comparable>> enumerator =
-              Linq4j.enumerator(map.entrySet());
+      case SCALAR:
+        @SuppressWarnings("unchecked") List<Comparable> list =
+            (List<Comparable>) inputObject;
+        enumerators.add(
+            Linq4j.transform(
+                Linq4j.enumerator(list), FlatLists::of));
+        break;
+      case LIST:
+        @SuppressWarnings("unchecked") List<List<Comparable>> listList =
+            (List<List<Comparable>>) inputObject;
+        enumerators.add(Linq4j.enumerator(listList));
+        break;
+      case MAP:
+        @SuppressWarnings("unchecked") Map<Comparable, Comparable> map =
+            (Map<Comparable, Comparable>) inputObject;
+        Enumerator<Entry<Comparable, Comparable>> enumerator =
+            Linq4j.enumerator(map.entrySet());
 
-          Enumerator<List<Comparable>> transformed = Linq4j.transform(enumerator,
-              e -> FlatLists.of(e.getKey(), e.getValue()));
-          enumerators.add(transformed);
-          break;
-        default:
-          break;
+        Enumerator<List<Comparable>> transformed = Linq4j.transform(enumerator,
+            e -> FlatLists.of(e.getKey(), e.getValue()));
+        enumerators.add(transformed);
+        break;
+      default:
+        break;
       }
       if (fieldCount < 0) {
         ++totalFieldCount;
@@ -2295,18 +2353,18 @@ public class SqlFunctions {
 
   private static int lastDay(int y, int m) {
     switch (m) {
-      case 2:
-        return y % 4 == 0
-            && (y % 100 != 0
-            || y % 400 == 0)
-            ? 29 : 28;
-      case 4:
-      case 6:
-      case 9:
-      case 11:
-        return 30;
-      default:
-        return 31;
+    case 2:
+      return y % 4 == 0
+          && (y % 100 != 0
+          || y % 400 == 0)
+          ? 29 : 28;
+    case 4:
+    case 6:
+    case 9:
+    case 11:
+      return 30;
+    default:
+      return 31;
     }
   }
 
@@ -2413,31 +2471,31 @@ public class SqlFunctions {
       String pathWff = matcher.group(2);
       DocumentContext ctx;
       switch (mode) {
-        case STRICT:
-          if (input instanceof Exception) {
-            return PathContext.withStrictException((Exception) input);
-          }
-          ctx = JsonPath.parse(input,
-              Configuration
-                  .builder()
-                  .jsonProvider(JSON_PATH_JSON_PROVIDER)
-                  .mappingProvider(JSON_PATH_MAPPING_PROVIDER)
-                  .build());
-          break;
-        case LAX:
-          if (input instanceof Exception) {
-            return PathContext.withReturned(PathMode.LAX, null);
-          }
-          ctx = JsonPath.parse(input,
-              Configuration
-                  .builder()
-                  .options(Option.SUPPRESS_EXCEPTIONS)
-                  .jsonProvider(JSON_PATH_JSON_PROVIDER)
-                  .mappingProvider(JSON_PATH_MAPPING_PROVIDER)
-                  .build());
-          break;
-        default:
-          throw RESOURCE.illegalJsonPathModeInPathSpec(mode.toString(), pathSpec).ex();
+      case STRICT:
+        if (input instanceof Exception) {
+          return PathContext.withStrictException((Exception) input);
+        }
+        ctx = JsonPath.parse(input,
+            Configuration
+                .builder()
+                .jsonProvider(JSON_PATH_JSON_PROVIDER)
+                .mappingProvider(JSON_PATH_MAPPING_PROVIDER)
+                .build());
+        break;
+      case LAX:
+        if (input instanceof Exception) {
+          return PathContext.withReturned(PathMode.LAX, null);
+        }
+        ctx = JsonPath.parse(input,
+            Configuration
+                .builder()
+                .options(Option.SUPPRESS_EXCEPTIONS)
+                .jsonProvider(JSON_PATH_JSON_PROVIDER)
+                .mappingProvider(JSON_PATH_MAPPING_PROVIDER)
+                .build());
+        break;
+      default:
+        throw RESOURCE.illegalJsonPathModeInPathSpec(mode.toString(), pathSpec).ex();
       }
       try {
         return PathContext.withReturned(mode, ctx.read(pathWff));
@@ -2454,21 +2512,21 @@ public class SqlFunctions {
   }
 
   public static Boolean jsonExists(Object input,
-                                   SqlJsonExistsErrorBehavior errorBehavior) {
+      SqlJsonExistsErrorBehavior errorBehavior) {
     PathContext context = (PathContext) input;
     if (context.exc != null) {
       switch (errorBehavior) {
-        case TRUE:
-          return Boolean.TRUE;
-        case FALSE:
-          return Boolean.FALSE;
-        case ERROR:
-          throw toUnchecked(context.exc);
-        case UNKNOWN:
-          return null;
-        default:
-          throw RESOURCE.illegalErrorBehaviorInJsonExistsFunc(
-              errorBehavior.toString()).ex();
+      case TRUE:
+        return Boolean.TRUE;
+      case FALSE:
+        return Boolean.FALSE;
+      case ERROR:
+        throw toUnchecked(context.exc);
+      case UNKNOWN:
+        return null;
+      default:
+        throw RESOURCE.illegalErrorBehaviorInJsonExistsFunc(
+            errorBehavior.toString()).ex();
       }
     } else {
       return !Objects.isNull(context.pathReturned);
@@ -2476,10 +2534,10 @@ public class SqlFunctions {
   }
 
   public static Object jsonValueAny(Object input,
-                                    SqlJsonValueEmptyOrErrorBehavior emptyBehavior,
-                                    Object defaultValueOnEmpty,
-                                    SqlJsonValueEmptyOrErrorBehavior errorBehavior,
-                                    Object defaultValueOnError) {
+      SqlJsonValueEmptyOrErrorBehavior emptyBehavior,
+      Object defaultValueOnEmpty,
+      SqlJsonValueEmptyOrErrorBehavior errorBehavior,
+      Object defaultValueOnError) {
     final PathContext context = (PathContext) input;
     final Exception exc;
     if (context.exc != null) {
@@ -2489,15 +2547,15 @@ public class SqlFunctions {
       if (value == null || context.mode == PathMode.LAX
           && !isScalarObject(value)) {
         switch (emptyBehavior) {
-          case ERROR:
-            throw RESOURCE.emptyResultOfJsonValueFuncNotAllowed().ex();
-          case NULL:
-            return null;
-          case DEFAULT:
-            return defaultValueOnEmpty;
-          default:
-            throw RESOURCE.illegalEmptyBehaviorInJsonValueFunc(
-                emptyBehavior.toString()).ex();
+        case ERROR:
+          throw RESOURCE.emptyResultOfJsonValueFuncNotAllowed().ex();
+        case NULL:
+          return null;
+        case DEFAULT:
+          return defaultValueOnEmpty;
+        default:
+          throw RESOURCE.illegalEmptyBehaviorInJsonValueFunc(
+              emptyBehavior.toString()).ex();
         }
       } else if (context.mode == PathMode.STRICT
           && !isScalarObject(value)) {
@@ -2508,22 +2566,22 @@ public class SqlFunctions {
       }
     }
     switch (errorBehavior) {
-      case ERROR:
-        throw toUnchecked(exc);
-      case NULL:
-        return null;
-      case DEFAULT:
-        return defaultValueOnError;
-      default:
-        throw RESOURCE.illegalErrorBehaviorInJsonValueFunc(
-            errorBehavior.toString()).ex();
+    case ERROR:
+      throw toUnchecked(exc);
+    case NULL:
+      return null;
+    case DEFAULT:
+      return defaultValueOnError;
+    default:
+      throw RESOURCE.illegalErrorBehaviorInJsonValueFunc(
+          errorBehavior.toString()).ex();
     }
   }
 
   public static String jsonQuery(Object input,
-                                 SqlJsonQueryWrapperBehavior wrapperBehavior,
-                                 SqlJsonQueryEmptyOrErrorBehavior emptyBehavior,
-                                 SqlJsonQueryEmptyOrErrorBehavior errorBehavior) {
+      SqlJsonQueryWrapperBehavior wrapperBehavior,
+      SqlJsonQueryEmptyOrErrorBehavior emptyBehavior,
+      SqlJsonQueryEmptyOrErrorBehavior errorBehavior) {
     final PathContext context = (PathContext) input;
     final Exception exc;
     if (context.exc != null) {
@@ -2534,38 +2592,38 @@ public class SqlFunctions {
         value = null;
       } else {
         switch (wrapperBehavior) {
-          case WITHOUT_ARRAY:
+        case WITHOUT_ARRAY:
+          value = context.pathReturned;
+          break;
+        case WITH_UNCONDITIONAL_ARRAY:
+          value = Collections.singletonList(context.pathReturned);
+          break;
+        case WITH_CONDITIONAL_ARRAY:
+          if (context.pathReturned instanceof Collection) {
             value = context.pathReturned;
-            break;
-          case WITH_UNCONDITIONAL_ARRAY:
+          } else {
             value = Collections.singletonList(context.pathReturned);
-            break;
-          case WITH_CONDITIONAL_ARRAY:
-            if (context.pathReturned instanceof Collection) {
-              value = context.pathReturned;
-            } else {
-              value = Collections.singletonList(context.pathReturned);
-            }
-            break;
-          default:
-            throw RESOURCE.illegalWrapperBehaviorInJsonQueryFunc(
-                wrapperBehavior.toString()).ex();
+          }
+          break;
+        default:
+          throw RESOURCE.illegalWrapperBehaviorInJsonQueryFunc(
+              wrapperBehavior.toString()).ex();
         }
       }
       if (value == null || context.mode == PathMode.LAX
           && isScalarObject(value)) {
         switch (emptyBehavior) {
-          case ERROR:
-            throw RESOURCE.emptyResultOfJsonQueryFuncNotAllowed().ex();
-          case NULL:
-            return null;
-          case EMPTY_ARRAY:
-            return "[]";
-          case EMPTY_OBJECT:
-            return "{}";
-          default:
-            throw RESOURCE.illegalEmptyBehaviorInJsonQueryFunc(
-                emptyBehavior.toString()).ex();
+        case ERROR:
+          throw RESOURCE.emptyResultOfJsonQueryFuncNotAllowed().ex();
+        case NULL:
+          return null;
+        case EMPTY_ARRAY:
+          return "[]";
+        case EMPTY_OBJECT:
+          return "{}";
+        default:
+          throw RESOURCE.illegalEmptyBehaviorInJsonQueryFunc(
+              emptyBehavior.toString()).ex();
         }
       } else if (context.mode == PathMode.STRICT && isScalarObject(value)) {
         exc = RESOURCE.arrayOrObjectValueRequiredInStrictModeOfJsonQueryFunc(
@@ -2579,17 +2637,17 @@ public class SqlFunctions {
       }
     }
     switch (errorBehavior) {
-      case ERROR:
-        throw toUnchecked(exc);
-      case NULL:
-        return null;
-      case EMPTY_ARRAY:
-        return "[]";
-      case EMPTY_OBJECT:
-        return "{}";
-      default:
-        throw RESOURCE.illegalErrorBehaviorInJsonQueryFunc(
-            errorBehavior.toString()).ex();
+    case ERROR:
+      throw toUnchecked(exc);
+    case NULL:
+      return null;
+    case EMPTY_ARRAY:
+      return "[]";
+    case EMPTY_OBJECT:
+      return "{}";
+    default:
+      throw RESOURCE.illegalErrorBehaviorInJsonQueryFunc(
+          errorBehavior.toString()).ex();
     }
   }
 
@@ -2602,7 +2660,7 @@ public class SqlFunctions {
   }
 
   public static String jsonObject(SqlJsonConstructorNullClause nullClause,
-                                  Object... kvs) {
+      Object... kvs) {
     assert kvs.length % 2 == 0;
     Map<String, Object> map = new HashMap<>();
     for (int i = 0; i < kvs.length; i += 2) {
@@ -2623,7 +2681,7 @@ public class SqlFunctions {
   }
 
   public static void jsonObjectAggAdd(Map map, String k, Object v,
-                                      SqlJsonConstructorNullClause nullClause) {
+      SqlJsonConstructorNullClause nullClause) {
     if (k == null) {
       throw RESOURCE.nullKeyOfJsonObjectNotAllowed().ex();
     }
@@ -2637,7 +2695,7 @@ public class SqlFunctions {
   }
 
   public static String jsonArray(SqlJsonConstructorNullClause nullClause,
-                                 Object... elements) {
+      Object... elements) {
     List<Object> list = new ArrayList<>();
     for (Object element : elements) {
       if (element == null) {
@@ -2652,7 +2710,7 @@ public class SqlFunctions {
   }
 
   public static void jsonArrayAggAdd(List list, Object element,
-                                     SqlJsonConstructorNullClause nullClause) {
+      SqlJsonConstructorNullClause nullClause) {
     if (element == null) {
       if (nullClause == SqlJsonConstructorNullClause.NULL_ON_NULL) {
         list.add(null);
@@ -2769,7 +2827,7 @@ public class SqlFunctions {
     private int ordinality;
 
     ProductComparableListEnumerator(List<Enumerator<List<E>>> enumerators,
-                                    int fieldCount, boolean withOrdinality) {
+        int fieldCount, boolean withOrdinality) {
       super(enumerators);
       this.withOrdinality = withOrdinality;
       flatElements = (E[]) new Comparable[fieldCount];

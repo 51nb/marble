@@ -16,9 +16,11 @@
  */
 package org.apache.calcite.adapter.enumerable;
 
+import org.apache.calcite.linq4j.function.Predicate2;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
+import org.apache.calcite.linq4j.tree.ParameterExpression;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -28,12 +30,14 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelNodes;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.EquiJoin;
+import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexProgramBuilder;
 import org.apache.calcite.util.BuiltInMethod;
-import org.apache.calcite.util.ImmutableIntList;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
@@ -42,84 +46,26 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** Implementation of {@link org.apache.calcite.rel.core.Join} in
- * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
-public class EnumerableJoin extends EquiJoin implements EnumerableRel {
-  /** Creates an EnumerableJoin.
-   *
-   * <p>Use {@link #create} unless you know what you're doing. */
-  protected EnumerableJoin(
-      RelOptCluster cluster,
-      RelTraitSet traits,
-      RelNode left,
-      RelNode right,
-      RexNode condition,
-      ImmutableIntList leftKeys,
-      ImmutableIntList rightKeys,
-      Set<CorrelationId> variablesSet,
-      JoinRelType joinType)
+/**
+ * Implementation of {@link Join} in
+ * {@link EnumerableConvention enumerable calling convention}
+ * that allows conditions that are not just {@code =} (equals) and have equal
+ * join keys.
+ */
+public class EnumerableThetaHashJoin extends Join implements EnumerableRel {
+  protected EnumerableThetaHashJoin(RelOptCluster cluster, RelTraitSet traits,
+      RelNode left, RelNode right, RexNode condition,
+      Set<CorrelationId> variablesSet, JoinRelType joinType)
       throws InvalidRelException {
-    super(
-        cluster,
-        traits,
-        left,
-        right,
-        condition,
-        leftKeys,
-        rightKeys,
-        variablesSet,
-        joinType);
+    super(cluster, traits, left, right, condition, variablesSet, joinType);
   }
 
-  @Deprecated // to be removed before 2.0
-  protected EnumerableJoin(RelOptCluster cluster, RelTraitSet traits,
-      RelNode left, RelNode right, RexNode condition, ImmutableIntList leftKeys,
-      ImmutableIntList rightKeys, JoinRelType joinType,
-      Set<String> variablesStopped) throws InvalidRelException {
-    this(cluster, traits, left, right, condition, leftKeys, rightKeys,
-        CorrelationId.setOf(variablesStopped), joinType);
-  }
-
-  /** Creates an EnumerableJoin. */
-  public static EnumerableJoin create(
-      RelNode left,
-      RelNode right,
-      RexNode condition,
-      ImmutableIntList leftKeys,
-      ImmutableIntList rightKeys,
-      Set<CorrelationId> variablesSet,
-      JoinRelType joinType)
-      throws InvalidRelException {
-    final RelOptCluster cluster = left.getCluster();
-    final RelTraitSet traitSet =
-        cluster.traitSetOf(EnumerableConvention.INSTANCE);
-    return new EnumerableJoin(cluster, traitSet, left, right, condition,
-        leftKeys, rightKeys, variablesSet, joinType);
-  }
-
-  @Deprecated // to be removed before 2.0
-  public static EnumerableJoin create(
-      RelNode left,
-      RelNode right,
-      RexNode condition,
-      ImmutableIntList leftKeys,
-      ImmutableIntList rightKeys,
-      JoinRelType joinType,
-      Set<String> variablesStopped)
-      throws InvalidRelException {
-    return create(left, right, condition, leftKeys, rightKeys,
-        CorrelationId.setOf(variablesStopped), joinType);
-  }
-
-  @Override public EnumerableJoin copy(RelTraitSet traitSet, RexNode condition,
-      RelNode left, RelNode right, JoinRelType joinType,
+  @Override public EnumerableThetaHashJoin copy(RelTraitSet traitSet,
+      RexNode condition, RelNode left, RelNode right, JoinRelType joinType,
       boolean semiJoinDone) {
-    final JoinInfo joinInfo = JoinInfo.of(left, right, condition);
-    assert joinInfo.isEqui();
     try {
-      return new EnumerableJoin(getCluster(), traitSet, left, right,
-          condition, joinInfo.leftKeys, joinInfo.rightKeys, variablesSet,
-          joinType);
+      return new EnumerableThetaHashJoin(getCluster(), traitSet, left, right,
+          condition, variablesSet, joinType);
     } catch (InvalidRelException e) {
       // Semantic error not possible. Must be a bug. Convert to
       // internal error.
@@ -183,6 +129,8 @@ public class EnumerableJoin extends EquiJoin implements EnumerableRel {
   }
 
   public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
+    final JoinInfo info = JoinInfo.of(left, right, condition);
+    RexNode remainCondition = info.getRemaining(getCluster().getRexBuilder());
     BlockBuilder builder = new BlockBuilder();
     final Result leftResult =
         implementor.visitChild(this, 0, (EnumerableRel) left, pref);
@@ -199,36 +147,40 @@ public class EnumerableJoin extends EquiJoin implements EnumerableRel {
             implementor.getTypeFactory(), getRowType(), pref.preferArray());
     final PhysType keyPhysType =
         leftResult.physType.project(
-            leftKeys, JavaRowFormat.LIST);
+            info.leftKeys, JavaRowFormat.LIST);
     //if leftKeys classes are not equals to rightKeys classes,we can try to
     // convert them to same classes
-    List<Class> leftKeysClassList = leftKeys.stream()
+    List<Class> leftKeysClassList = info.leftKeys.stream()
         .map(leftResult.physType::fieldClass)
         .collect(
             Collectors.toList());
-    List<Class> rightKeysClassList = rightKeys.stream()
+    List<Class> rightKeysClassList = info.rightKeys.stream()
         .map(rightResult.physType::fieldClass)
         .collect(
             Collectors.toList());
-    List<Class> targetFieldClassList = consistentKeyTypes(
+    List<Class> targetFieldClassList = EquiJoin.consistentKeyTypes(
         leftKeysClassList,
         rightKeysClassList);
     return implementor.result(
         physType,
         builder.append(
             Expressions.call(
-                leftExpression,
-                BuiltInMethod.JOIN.method,
+                BuiltInMethod.THETA_HASH_JOIN.method,
                 Expressions.list(
+                    leftExpression,
                     rightExpression,
-                    leftResult.physType.generateAccessor(leftKeys,
+                    leftResult.physType.generateAccessor(info.leftKeys,
                         targetFieldClassList == null
                             ? leftKeysClassList
                             : targetFieldClassList),
-                    rightResult.physType.generateAccessor(rightKeys,
+                    rightResult.physType.generateAccessor(info.rightKeys,
                         targetFieldClassList == null
                             ? rightKeysClassList
                             : targetFieldClassList),
+                    predicate(implementor,
+                        leftResult.physType,
+                        rightResult.physType,
+                        remainCondition),
                     EnumUtils.joinSelector(joinType,
                         physType,
                         ImmutableList.of(
@@ -241,8 +193,38 @@ public class EnumerableJoin extends EquiJoin implements EnumerableRel {
                     .append(
                         Expressions.constant(
                             joinType.generatesNullsOnRight())))).toBlock());
+
   }
 
+  Expression predicate(EnumerableRelImplementor implementor,
+      PhysType leftPhysType, PhysType rightPhysType,
+      RexNode condition) {
+    BlockBuilder builder = new BlockBuilder();
+    final ParameterExpression left_ =
+        Expressions.parameter(leftPhysType.getJavaRowType(), "left");
+    final ParameterExpression right_ =
+        Expressions.parameter(rightPhysType.getJavaRowType(), "right");
+    final RexProgramBuilder program =
+        new RexProgramBuilder(
+            implementor.getTypeFactory().builder()
+                .addAll(left.getRowType().getFieldList())
+                .addAll(right.getRowType().getFieldList())
+                .build(),
+            getCluster().getRexBuilder());
+    program.addCondition(condition);
+    builder.add(
+        Expressions.return_(null,
+            RexToLixTranslator.translateCondition(program.getProgram(),
+                implementor.getTypeFactory(),
+                builder,
+                new RexToLixTranslator.InputGetterImpl(
+                    ImmutableList.of(Pair.of((Expression) left_, leftPhysType),
+                        Pair.of((Expression) right_, rightPhysType))),
+                implementor.allCorrelateVariables,
+                implementor.getConformance())));
+    return Expressions.lambda(Predicate2.class, builder.toBlock(), left_,
+        right_);
+  }
 }
 
-// End EnumerableJoin.java
+// End EnumerableThetaHashJoin.java

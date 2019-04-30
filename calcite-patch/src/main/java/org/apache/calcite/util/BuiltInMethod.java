@@ -19,7 +19,8 @@ package org.apache.calcite.util;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.enumerable.AggregateLambdaFactory;
 import org.apache.calcite.adapter.enumerable.OrderedAggregateLambdaFactory;
-import org.apache.calcite.adapter.enumerable.SequencedAdderAggregateLambdaFactory;
+import org.apache.calcite.adapter.enumerable
+    .SequencedAdderAggregateLambdaFactory;
 import org.apache.calcite.adapter.enumerable.SourceSorter;
 import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.adapter.jdbc.JdbcSchema;
@@ -99,6 +100,7 @@ import org.apache.calcite.sql.SqlJsonValueEmptyOrErrorBehavior;
 
 import com.google.common.collect.ImmutableMap;
 
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -164,6 +166,10 @@ public enum BuiltInMethod {
   THETA_JOIN(EnumerableDefaults.class, "thetaJoin", Enumerable.class,
       Enumerable.class, Predicate2.class, Function2.class, boolean.class,
       boolean.class),
+  THETA_HASH_JOIN(EnumerableDefaults.class, "thetaHashJoin", Enumerable.class,
+      Enumerable.class, Function1.class, Function1.class, Predicate2.class,
+      Function2.class, EqualityComparer.class,
+      boolean.class, boolean.class),
   CORRELATE_JOIN(ExtendedEnumerable.class, "correlateJoin",
       CorrelateJoinType.class, Function1.class, Function2.class),
   SELECT(ExtendedEnumerable.class, "select", Function1.class),
@@ -259,6 +265,9 @@ public enum BuiltInMethod {
   BINARY_SEARCH6_UPPER(BinarySearch.class, "upperBound", Object[].class,
       Object.class, int.class, int.class, Function1.class, Comparator.class),
   ARRAY_ITEM(SqlFunctions.class, "arrayItemOptional", List.class, int.class),
+  ARRAY_ITEM_INDEX_FROM_ZERO(SqlFunctions.class,
+      "arrayItemIndexFromZeroOptional", List.class,
+      int.class),
   MAP_ITEM(SqlFunctions.class, "mapItemOptional", Map.class, Object.class),
   ANY_ITEM(SqlFunctions.class, "itemOptional", Object.class, Object.class),
   UPPER(SqlFunctions.class, "upper", String.class),

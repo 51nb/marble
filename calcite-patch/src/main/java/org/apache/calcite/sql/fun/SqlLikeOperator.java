@@ -63,7 +63,7 @@ public class SqlLikeOperator extends SqlSpecialOperator {
    * @param kind    Kind
    * @param negated Whether this is 'NOT LIKE'
    */
-  SqlLikeOperator(
+  public SqlLikeOperator(
       String name,
       SqlKind kind,
       boolean negated) {
@@ -100,26 +100,26 @@ public class SqlLikeOperator extends SqlSpecialOperator {
       SqlCallBinding callBinding,
       boolean throwOnFailure) {
     switch (callBinding.getOperandCount()) {
-      case 2:
-        if (!OperandTypes.STRING_SAME_SAME.checkOperandTypes(
-            callBinding,
-            throwOnFailure)) {
-          return false;
-        }
-        break;
-      case 3:
-        if (!OperandTypes.STRING_SAME_SAME_SAME.checkOperandTypes(
-            callBinding,
-            throwOnFailure)) {
-          return false;
-        }
+    case 2:
+      if (!OperandTypes.STRING_SAME_SAME.checkOperandTypes(
+          callBinding,
+          throwOnFailure)) {
+        return false;
+      }
+      break;
+    case 3:
+      if (!OperandTypes.STRING_SAME_SAME_SAME.checkOperandTypes(
+          callBinding,
+          throwOnFailure)) {
+        return false;
+      }
 
-        // calc implementation should
-        // enforce the escape character length to be 1
-        break;
-      default:
-        throw new AssertionError("unexpected number of args to "
-            + callBinding.getCall() + ": " + callBinding.getOperandCount());
+      // calc implementation should
+      // enforce the escape character length to be 1
+      break;
+    default:
+      throw new AssertionError("unexpected number of args to "
+          + callBinding.getCall() + ": " + callBinding.getOperandCount());
     }
 
     return SqlTypeUtil.isCharTypeComparable(

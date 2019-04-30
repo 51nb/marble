@@ -89,7 +89,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   protected final CalciteConnectionConfig config;
 
   public CalciteCatalogReader(CalciteSchema rootSchema,
-                              List<String> defaultSchema, RelDataTypeFactory typeFactory, CalciteConnectionConfig config) {
+      List<String> defaultSchema, RelDataTypeFactory typeFactory, CalciteConnectionConfig config) {
     this(rootSchema, SqlNameMatchers.withCaseSensitive(config != null && config.caseSensitive()),
         ImmutableList.of(Objects.requireNonNull(defaultSchema),
             ImmutableList.of()),
@@ -97,8 +97,8 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   }
 
   protected CalciteCatalogReader(CalciteSchema rootSchema,
-                                 SqlNameMatcher nameMatcher, List<List<String>> schemaPaths,
-                                 RelDataTypeFactory typeFactory, CalciteConnectionConfig config) {
+      SqlNameMatcher nameMatcher, List<List<String>> schemaPaths,
+      RelDataTypeFactory typeFactory, CalciteConnectionConfig config) {
     this.rootSchema = Objects.requireNonNull(rootSchema);
     this.nameMatcher = nameMatcher;
     this.schemaPaths =
@@ -163,7 +163,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
               Iterables.concat(schemaNames, Util.skipLast(names)), nameMatcher);
       if (schema != null) {
         final String name = Util.last(names);
-        functions2.addAll(schema.getFunctions(name, true));
+        functions2.addAll(schema.getFunctions(name, config.caseSensitive()));
       }
     }
     return functions2;
@@ -209,7 +209,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   }
 
   private SqlMonikerImpl moniker(CalciteSchema schema, String name,
-                                 SqlMonikerType type) {
+      SqlMonikerType type) {
     final List<String> path = schema.path(name);
     if (path.size() == 1
         && !schema.root().name.equals("")
@@ -238,15 +238,15 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   }
 
   public RelDataType createTypeFromProjection(final RelDataType type,
-                                              final List<String> columnNameList) {
+      final List<String> columnNameList) {
     return SqlValidatorUtil.createTypeFromProjection(type, columnNameList,
         typeFactory, nameMatcher.isCaseSensitive());
   }
 
   public void lookupOperatorOverloads(final SqlIdentifier opName,
-                                      SqlFunctionCategory category,
-                                      SqlSyntax syntax,
-                                      List<SqlOperator> operatorList) {
+      SqlFunctionCategory category,
+      SqlSyntax syntax,
+      List<SqlOperator> operatorList) {
     if (syntax != SqlSyntax.FUNCTION) {
       return;
     }
@@ -306,7 +306,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
    * Remove RelDataTypeFactory argument from SqlUserDefinedAggFunction
    * constructor. */
   private static SqlOperator toOp(RelDataTypeFactory typeFactory,
-                                  SqlIdentifier name, final Function function) {
+      SqlIdentifier name, final Function function) {
     List<RelDataType> argTypes = new ArrayList<>();
     List<SqlTypeFamily> typeFamilies = new ArrayList<>();
     for (FunctionParameter o : function.getParameters()) {
@@ -369,7 +369,7 @@ public class CalciteCatalogReader implements Prepare.CatalogReader {
   }
 
   private static RelDataType toSql(RelDataTypeFactory typeFactory,
-                                   RelDataType type) {
+      RelDataType type) {
     if (type instanceof RelDataTypeFactoryImpl.JavaType
         && ((RelDataTypeFactoryImpl.JavaType) type).getJavaClass()
         == Object.class) {
