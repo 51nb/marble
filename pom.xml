@@ -10,6 +10,40 @@
     <version>1.0-SNAPSHOT</version>
 
 
+    <!-- oss -->
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <scm>
+        <connection>scm:git:git@github.com:51nb/marble.git</connection>
+        <developerConnection>scm:git:https://github.com/51nb/marble.git</developerConnection>
+        <url>https://github.com/51nb/marble</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>Lai Zhou</id>
+            <name>LaiZhou</name>
+            <email>hhlai1990@gmail.com</email>
+        </developer>
+    </developers>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/51nb/marble/issues</url>
+    </issueManagement>
+
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
@@ -49,7 +83,7 @@
         <dependencies>
             <!--project-->
             <dependency>
-                <groupId>com.u51.marble</groupId>
+                <groupId>com.u51.calcite</groupId>
                 <artifactId>calcite-patch</artifactId>
                 <version>${calcite-patch.version}</version>
             </dependency>
