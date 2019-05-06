@@ -1,5 +1,5 @@
 **Marble is a high performance in-memory hive sql engine based on [Apache Calcite](https://calcite.apache.org/).  
-It can help you to migrate hive sql scripts to a real-time computing system.
+It can help you to migrate hive sql scripts to a real-time computing system.  
 It also provides a convenient Table API to help you to build custom SQL engines.**
 
 ## Build and run tests
