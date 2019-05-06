@@ -1,5 +1,6 @@
 **Marble is a high performance in-memory hive sql engine based on [Apache Calcite](https://calcite.apache.org/).  
-It can help you to migrate hive sql scripts to a real-time computing system.**
+It can help you to migrate hive sql scripts to a real-time computing system.
+It also provides a convenient Table API to help you to build custom SQL engines.**
 
 ## Build and run tests
 **Requirements**
@@ -9,9 +10,11 @@ It can help you to migrate hive sql scripts to a real-time computing system.**
 
 1.build and install calcite-patch first
 ```$xslt
-cd marble/calcite-patch
+git clone https://github.com/51nb/calcite-patch.git
+cd calcite-patch
 mvn clean install -DskipTests
 ```
+In the long term,we hope to merge the patches to Calcite finally.
 
 2.build marble
 ```$xslt
@@ -26,7 +29,39 @@ mvn clean install -DskipTests
 ## Usage
 **Maven dependency**
 ```$xslt
-todo
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>janino</artifactId>
+            <version>3.0.11</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>commons-compiler</artifactId>
+            <version>3.0.11</version>
+        </dependency>
+        <dependency>
+            <groupId>com.u51.marble</groupId>
+            <artifactId>marble-table-hive</artifactId>
+            <version>1.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.calcite</groupId>
+                    <artifactId>calcite-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.calcite</groupId>
+                    <artifactId>calcite-linq4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.codehaus.janino</groupId>
+                    <artifactId>janino</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.codehaus.janino</groupId>
+                    <artifactId>commons-compiler</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 ```
 **API Overview**
 

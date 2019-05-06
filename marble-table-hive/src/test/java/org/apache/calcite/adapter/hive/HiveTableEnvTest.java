@@ -17,12 +17,9 @@
 package org.apache.calcite.adapter.hive;
 
 import org.apache.calcite.runtime.SqlFunctions;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.table.DataTable;
 import org.apache.calcite.table.TableEnv;
-
 import org.apache.hadoop.hive.ql.session.SessionState;
-
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -31,9 +28,6 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
