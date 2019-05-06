@@ -8,7 +8,14 @@ It also provides a convenient Table API to help you to build custom SQL engines.
 * Java 1.8 as a build JDK
 * Maven
 
-1.build and install calcite-patch first
+
+1.build marble
+```$xslt
+cd marble
+mvn clean install -DskipTests
+```
+**(Optional)**  
+if you need modify the patches of Calcite, build [calcite-patch](https://github.com/51nb/calcite-patch) project first
 ```$xslt
 git clone https://github.com/51nb/calcite-patch.git
 cd calcite-patch
@@ -16,15 +23,10 @@ mvn clean install -DskipTests
 ```
 In the long term,we hope to merge the patches to Calcite finally.
 
-2.build marble
-```$xslt
-cd marble
-mvn clean install -DskipTests
-```
 
-3.import `marble` project into IDE, but **please don't import `calcite-patch` as a submodule of marble project**
+2.import `marble` project into IDE, but **please don't import `calcite-patch` as a submodule of marble project**
 
-4.run the test `TableEnvTest` and `HiveTableEnvTest`
+3.run the test `TableEnvTest` and `HiveTableEnvTest`
 
 ## Usage
 **Maven dependency**
