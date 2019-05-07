@@ -79,7 +79,7 @@ DataTable t3=tableEnv.fromRowListWithSqlTypeMap(rowList,sqlTypeMap);
 tableEnv.addSubSchema("test");
 tableEnv.registerTable("test","t1",t1);
 tableEnv.registerTable("test","t2", t2);
-DataTable queryResult = tableEnv.sqlQuery("select * from test.t1 join test.t2 where t1.id=t2.id");
+DataTable queryResult = tableEnv.sqlQuery("select * from test.t1 join test.t2 on t1.id=t2.id");
 List<Map<String, Object>> rowList=queryResult.toMapList();
 ```
 It's recommended to enable plan cache for the same sql query:
