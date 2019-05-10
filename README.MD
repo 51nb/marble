@@ -143,7 +143,7 @@ some related issues:[CALCITE-2282](https://issues.apache.org/jira/browse/CALCITE
 *  use a customized sql Planner to replace the default PlannerImpl.(low priority)
 *  support TPC-DS queries with a customized scale.(low priority)
 *  distributed broadcast join.(experimental)
-*  use Apache Arrow to store in-memory data,to support Vectorized execution.(experimental)
+*  Vectorized Hive udf execution.(experimental)
 *  cost based optimizer.(experimental)  
 
 More issues see [issues](https://github.com/51nb/marble/milestone/1).
