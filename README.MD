@@ -95,7 +95,7 @@ It can be used to:
 * execute a sql query to get the result `DataTable`
 
 The `TableEnv` supports Calcite's sql dialect by default,see it's [sql reference](https://calcite.apache.org/docs/reference.html).  
-The target of `HiveTableEnv` is to support hive sql as far as possible，developers can  aslo use
+The goal of `HiveTableEnv` is to support hive sql as far as possible，developers can  aslo use
 a `TableConfig` to create a new TableEnv to support other sql dialects(MysqlTableEnv,PostgreTableEnv ..etc).
 
 
