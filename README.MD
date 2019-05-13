@@ -139,9 +139,10 @@ The main type mapping between calcite and hive is:
 *  submit patches to Calcite,make it easy to upgrade calcite-core,
 some related issues:[CALCITE-2282](https://issues.apache.org/jira/browse/CALCITE-2282),[CALCITE-2973](https://issues.apache.org/jira/browse/CALCITE-2973),[CALCITE-2992](https://issues.apache.org/jira/browse/CALCITE-2992).(high priority)
 *  implements UDTF in a generic way.(high priority)
-*  support constant folded for hive udf.(low priority)
+*  constant folded for hive udf.(low priority)
 *  use a customized sql Planner to replace the default PlannerImpl.(low priority)
-*  support TPC-DS queries with a customized scale.(low priority)
+*  TPC-DS queries with a customized scale.(low priority)
+*  vectorized execution based on Apache Arrow.(experimental)
 *  distributed broadcast join.(experimental)
 *  cost based optimizer.(experimental)  
 
