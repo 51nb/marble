@@ -142,7 +142,7 @@ some related issues:[CALCITE-2282](https://issues.apache.org/jira/browse/CALCITE
 *  constant folded for hive udf.(low priority)
 *  use a customized sql Planner to replace the default PlannerImpl.(low priority)
 *  TPC-DS queries with a customized scale.(low priority)
-*  vectorized execution based on Apache Arrow.(experimental)
+*  vectorized udf execution.(experimental)
 *  distributed broadcast join.(experimental)
 *  cost based optimizer.(experimental)  
 
