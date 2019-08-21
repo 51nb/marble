@@ -335,6 +335,20 @@ public class HiveTableEnvTest {
     DataTable queryResult = tableEnv.sqlQuery(query);
     Assert.assertTrue(queryResult.toMapList().size() == 2);
   }
+
+  @Test
+  public void testArrayAsArgs() {
+    String sql="select concat_ws('-', array['3','4']) as a";
+    Assert.assertEquals("3-4", tableEnv.sqlQuery(sql).toMapList().get(0).get("a"));
+  }
+
+  @Test
+  public void testSortArray() {
+    String sql = "select sort_array(array['45', '4']) as a";
+    List<Map<String, Object>> maps = tableEnv.sqlQuery(sql).toMapList();
+    Assert.assertEquals("4", ((List)maps.get(0).get("a")).get(0));
+    Assert.assertEquals("45", ((List)maps.get(0).get("a")).get(1));
+  }
 }
 
 // End HiveTableEnvTest.java
