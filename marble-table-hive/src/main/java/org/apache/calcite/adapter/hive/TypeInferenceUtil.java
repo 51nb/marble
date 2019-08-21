@@ -293,10 +293,6 @@ public final class TypeInferenceUtil {
     case ARRAY:
       result = ((List)value).stream().map(x -> convertCalciteObject2HiveWritableObject(elementType, x)).collect(Collectors.toList());
       break;
-    case MAP:
-      // TODO 因为类型信息获取，以及 MAP 中 key ，value 没有被转换，这两个问题， MAP 类型并不被支持
-      result = value;
-      break;
     default:
       throw new UnsupportedOperationException(
           "can't convert an java Object to Hive Writable Object for SqlType: "
