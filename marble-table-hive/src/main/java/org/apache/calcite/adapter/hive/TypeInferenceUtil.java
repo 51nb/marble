@@ -186,7 +186,7 @@ public final class TypeInferenceUtil {
     if (relDataTypeHolder.isConstant()) {
       Object value = relDataTypeHolder.getValue();
       Object hiveWritableValue = convertCalciteObject2HiveWritableObject(
-          sqlTypeName,
+          relDataTypeHolder,
           value);
       result =
           PrimitiveObjectInspectorFactory
@@ -250,11 +250,13 @@ public final class TypeInferenceUtil {
   }
 
   public static Object convertCalciteObject2HiveWritableObject(
-      SqlTypeName sqlTypeName, Object value) {
+      RelDataTypeHolder relDataTypeHolder, Object value) {
     if (value == null) {
       return null;
     }
     Object result;
+    SqlTypeName sqlTypeName = relDataTypeHolder.getSqlTypeName();
+    RelDataTypeHolder elementType = relDataTypeHolder.getComponentType();
     switch (sqlTypeName) {
     case DECIMAL:
       result = new HiveDecimalWritable(
@@ -287,6 +289,9 @@ public final class TypeInferenceUtil {
       break;
     case SMALLINT:
       result = new ShortWritable(TypeConvertUtil.toShort(value));
+      break;
+    case ARRAY:
+      result = ((List)value).stream().map(x -> convertCalciteObject2HiveWritableObject(elementType, x)).collect(Collectors.toList());
       break;
     default:
       throw new UnsupportedOperationException(

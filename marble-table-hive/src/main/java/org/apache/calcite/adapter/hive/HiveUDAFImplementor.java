@@ -156,7 +156,7 @@ public class HiveUDAFImplementor extends StrictAggImplementor {
       for (int i = 0; i < convertedParas.length; i++) {
         convertedParas[i] =
             TypeInferenceUtil.convertCalciteObject2HiveWritableObject(
-                paramTypes[i].getSqlTypeName(), params[i]);
+                paramTypes[i], params[i]);
       }
       hiveUDAFParticipator.getGenericUDAFEvaluator()
           .iterate(hiveUDAFParticipator.getAggregationBuffer(), convertedParas);
