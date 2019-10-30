@@ -66,7 +66,7 @@
         <javacc-maven-plugin.version>2.4</javacc-maven-plugin.version>
         <hydromatic-resource.version>0.6</hydromatic-resource.version>
         <hydromatic-toolbox.version>0.3</hydromatic-toolbox.version>
-        <checkstyle.version>7.8.2</checkstyle.version>
+        <checkstyle.version>8.18</checkstyle.version>
         <maven-checkstyle-plugin.version>3.0.0</maven-checkstyle-plugin.version>
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
 
