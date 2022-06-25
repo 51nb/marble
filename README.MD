@@ -2,6 +2,8 @@
 It can help you to migrate hive sql scripts to a real-time computing system.  
 It also provides a convenient Table API to help you to build custom SQL engines.**
 
+You may want another similar project: [direct-spark-sql](https://github.com/direct-spark-sql/direct-spark-sql)
+
 ## Build and run tests
 **Requirements**
 
